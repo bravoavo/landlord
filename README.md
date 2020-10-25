@@ -2,10 +2,10 @@
 Modification for the Rust game
 ![alt text](https://github.com/bravoavo/LandLord/blob/main/rust-landlord.png?raw=true)
 
-Goal:
-Capture the whole map. Do it quadrant by quadrant.
+<b>Goal:<b>
+1. Capture the whole map. Do it quadrant by quadrant
 
-Rules:
+<b>Rules:<b>
 1. To capture quadrant build "Large banner on Pole"
 2. Each quadrant increase your gather rate for 3%
 3. If someone destroys your "Large banner on Pole" gather rate decreased
