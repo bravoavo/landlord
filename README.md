@@ -18,5 +18,4 @@ LandLors is a modification for the original game.
 * /lordclr - leave team
 
 ## Source
-https://github.com/bravoavo/LandLord
-Feel free to send merge requests
+https://github.com/bravoavo/LandLord Feel free to send merge requests
