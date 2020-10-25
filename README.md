@@ -1,11 +1,6 @@
 ![image](https://github.com/bravoavo/LandLord/blob/main/rust-landlord.png?raw=true)
 LandLors is a modification for the original game. 
 
-- [Game process](#heading)
-- [Chat comands](#heading-1)
-- [Source](#heading-2)
-
-
 
 ## Game process
 **Goal:**
@@ -21,6 +16,7 @@ LandLors is a modification for the original game.
 ## Chat comands
 * /lord - show your statistic
 * /lordclr - leave team
+
 ## Source
 https://github.com/bravoavo/LandLord
 Feel free to send merge requests
