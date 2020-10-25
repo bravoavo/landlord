@@ -12,8 +12,8 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("LandLord", "HunterXXI", "1.0.2")]
-    [Description("Capture the lands")]
+    [Info("LandLord", "HunterXXI", "1.0.3")]
+    [Description("Seize lands. Draft")]
 
     class LandLord : RustPlugin
     {
@@ -23,7 +23,7 @@ namespace Oxide.Plugins
         private DynamicConfigFile data;
 
         //Constant init
-        readonly int size = 146;
+        readonly float size = 146.3f;
         readonly bool debug = true;
         readonly string zonenameprefix = "Zone";
         Color32 orange = new Color32(255, 157, 0, 1);
@@ -45,19 +45,19 @@ namespace Oxide.Plugins
         #region ZoneInitialization
         private void MyZonesInit()
         {
-            int mapsize = (int)TerrainMeta.Size.x;
+            float mapsize = TerrainMeta.Size.x;
             int i = 1;
-            for (var x = -mapsize / 2 + 75; x <= mapsize / 2; x = x + size)
+            for (var x = -mapsize / 2 + size / 2; x <= mapsize / 2; x = x + size)
             {
-                for (var y = -mapsize / 2 + 75; y >= mapsize / 2; y = y + size)
+                for (var z = -mapsize / 2 + size / 2; z <= mapsize / 2; z = z + size)
                 {
-                    string[] array = new string[] { "name", "Main" + zonenameprefix + i, "size", "146 500 146", "location", x + " 0 " + y };
+                    string[] array = new string[] { "name", "Main" + zonenameprefix + i, "size", "146.3 500 146.3", "location", x + " 0 " + z };
                     ZoneManager.Call("CreateOrUpdateZone", "10" + i, array);
                     i++;
                 }
             }
             var InitFile = Interface.Oxide.DataFileSystem.GetFile("LandLord");
-            InitFile.WriteObject("Zone Init was Complite");
+            InitFile.WriteObject("Zone init has been complited");
             //LoadZones();
         }
         #endregion
@@ -154,7 +154,6 @@ var team = teamelement.FindTeam(player.currentTeam);
         void OnPlayerSleepEnded(BasePlayer player)
         {
             LordTeamInit(player);
-            if (debug) Puts("marker count " + allmarkers.Count());
             foreach (var quadrat in quadrants)
             {
                 foreach (var zone in quadrat.Value)
@@ -304,9 +303,9 @@ var team = teamelement.FindTeam(player.currentTeam);
             BaseEntity ent = (BaseEntity)entity;
             if (ent.prefabID.ToString() == "3188315846")
             {
-                if (debug) Puts("Prefab ID is " + ent.prefabID.ToString() + " Location" + ent.ServerPosition);
+                if (debug) Puts("Entity kill - Prefab ID is " + ent.prefabID.ToString() + " Location " + ent.ServerPosition);
                 var zoneid = poles.Where(x => x.Value == ent.ServerPosition).FirstOrDefault().Key;
-                if (debug) Puts("Where result " + zoneid);
+                if (debug) Puts("Looking for zone id. Where function result is " + zoneid);
                 if (zoneid != null)
                 {
                     if (allmarkers.ContainsKey(zoneid))
@@ -318,7 +317,7 @@ var team = teamelement.FindTeam(player.currentTeam);
                         allmarkers.Remove(zoneid);
                         flagmarkers.Remove(zoneid);
                     }
-                    if (debug) Puts("user id " + ent.OwnerID);
+                    if (debug) Puts("User ID " + ent.OwnerID);
                     ulong teampid;
                     if (teamList.ContainsKey(ent.OwnerID)) { teampid = teamList[ent.OwnerID]; }
                     else teampid = ent.OwnerID;
@@ -339,20 +338,19 @@ var team = teamelement.FindTeam(player.currentTeam);
 
         void OnEntityBuilt(Planner plan, GameObject go)
         {
-            if (debug) Puts("Entity build");
             // Puts("Player init works " + quadrants.Count());
             BasePlayer player = plan.GetOwnerPlayer();
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             var entity = go.ToBaseEntity();
-            if (debug) Puts("Prefab ID is " + entity.prefabID.ToString() + " zone ID is " + zids[0]);
+            if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID.ToString() + " zone ID is " + zids[0]);
             //3188315846
             string curentZoneId = zids[0];
             if (entity.prefabID.ToString() == "3188315846" && curentZoneId != null)
             {
-                if (debug) Puts("found prefab and zone not empty");
+                if (debug) Puts("Prefab is found and zone exists");
                 if (poles.ContainsKey(curentZoneId))
                 {
-                    player.ChatMessage("<color=orange>LANDLORD:</color> Zone already has a pole!");
+                    player.ChatMessage("<color=orange>LANDLORD:</color> This Zone already has a pole! Destroy it before build a new one.");
                     //entity.Kill(BaseNetworkable.DestroyMode.Gib);      
                     return;
                 }
@@ -390,17 +388,17 @@ var team = teamelement.FindTeam(player.currentTeam);
                     //configData.GatherRateData[teampid]++;
                 }
                 poles.Add(curentZoneId, entity.ServerPosition);
-                if (configData.PolesLocationData.ContainsKey(curentZoneId)) Puts("poles est");
+                if (configData.PolesLocationData.ContainsKey(curentZoneId)) Puts("Pole exists");
                 // configData.PolesLocationData.Add(curentZoneId, entity.ServerPosition);
 
-                if (debug) Puts("server position " + entity.ServerPosition.ToString());
+                if (debug) Puts("Server position " + entity.ServerPosition.ToString());
                 var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", curentZoneId);
                 SpawnMarkerOnMap(zonelocation, curentZoneId);
                 SpawnFlag(zonelocation, curentZoneId, teampid);
-                player.ChatMessage("<color=orange>LANDLORD:</color> You gather rate has growed up!");
+                player.ChatMessage("<color=orange>LANDLORD:</color> You deploy pole! Your gather rate increased!");
                 SaveData();
             }
-            else if (debug) Puts("No zone ID or prefab ");
+            else if (debug) Puts("Error! Not found zone ID or prefab");
         }
 
         void OnCollectiblePickup(Item item, BasePlayer player)
@@ -424,13 +422,13 @@ var team = teamelement.FindTeam(player.currentTeam);
             BasePlayer player = entity.ToPlayer();
             if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
             else teampid = player.userID;
-            if (debug) Puts("start amount" + item.amount);
+            if (debug) Puts("Start amount" + item.amount);
             if (gatherMultiplier.ContainsKey(teampid))
             {
                 if (gatherMultiplier[teampid] > 0)
                 {
                     float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
-                    if (debug) Puts("Multiplier " + multiplier);
+                    if (debug) Puts("Multiplier is " + multiplier);
                     item.amount = (int)(item.amount + 5 + item.amount * multiplier);
                 }
             }
@@ -453,14 +451,14 @@ var team = teamelement.FindTeam(player.currentTeam);
             //tmp_position1 = new Vector3(-675, 0, 640);
             int mapsize = (int)TerrainMeta.Size.x;
             colors = Color.black;
-            float zoneradius = 10000 / mapsize - 5; 
-            float markeralpha = 0.7f;
+            float zoneradius = (100000f / mapsize) * 0.02f;
+            float markeralpha = 0.5f;
             var mapMarker = GameManager.server.CreateEntity("assets/prefabs/tools/map/genericradiusmarker.prefab", position) as MapMarkerGenericRadius;
             mapMarker.alpha = markeralpha;
             mapMarker.color1 = colors;
             mapMarker.color2 = colors;
-            mapMarker.radius = 1.2f;
-            //mapMarker.radius = (float)Math.Round(zoneradius, 2);
+            //mapMarker.radius = 1.2f;
+            mapMarker.radius = (float)Math.Round(zoneradius, 2);
             mapMarker.Spawn();
             mapMarker.SendUpdate();
             if (!allmarkers.ContainsKey(curentZoneId))
@@ -469,7 +467,7 @@ var team = teamelement.FindTeam(player.currentTeam);
             }
             else
             {
-                if (debug) Puts("marker already in dictionary");
+                if (debug) Puts("Marker already in dictionary");
             }
 
         }
@@ -485,16 +483,15 @@ var team = teamelement.FindTeam(player.currentTeam);
                 listik.Add(ids[1]);
                 listik.Add(ids[2]);
             }
-            int mapsize = (int)TerrainMeta.Size.x;
+            float mapsize = TerrainMeta.Size.x;
             Color color1 = colorArray[listik[0]];
             Color color2 = colorArray[listik[1]];
             Color color3 = colorArray[listik[2]];
             Vector3 position1;
             Vector3 position2;
             Vector3 position3;
-            //float zoneradius = 1000 / mapsize; 
+            float zoneradius = (100000f/mapsize)*0.002f; 
             float markeralpha = 0.7f;
-            float zoneradius = 0.1f;
             position1.x = position.x - 63; position1.y = position.y; position1.z = position.z - 63;
             position2.x = position.x - 48; position2.y = position.y; position2.z = position.z - 63;
             position3.x = position.x - 33; position3.y = position.y; position3.z = position.z - 63;
@@ -518,7 +515,7 @@ var team = teamelement.FindTeam(player.currentTeam);
             }
             else
             {
-                if (debug) Puts("flag marker already in dictionary");
+                if (debug) Puts("Flag marker already in dictionary");
             }
         }
         #endregion
@@ -543,7 +540,7 @@ var team = teamelement.FindTeam(player.currentTeam);
             poles.Clear();
             try
             {
-                if (debug) Puts("try use old config");
+                if (debug) Puts("A try to use existing configuration");
                 configData = data.ReadObject<ConfigData>();
                 quadrants = configData.QuadrantsData;
                 flagi = configData.FlagiData;
@@ -570,7 +567,7 @@ var team = teamelement.FindTeam(player.currentTeam);
             }
             catch
             {
-                if (debug) Puts("new config");
+                if (debug) Puts("Existing configuration not found. Create a new configuration.");
                 configData = new ConfigData();
                 quadrants = configData.QuadrantsData;
                 flagi = configData.FlagiData;
