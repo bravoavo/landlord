@@ -19,4 +19,5 @@ LandLors is a modification for the original game.
 
 ## Source
 [GitHub](https://github.com/bravoavo/LandLord) 
+
 Feel free to send merge requests
