@@ -5,8 +5,8 @@ LandLors is a modification for the original game.
 ## Game process
 **Goal:**
 1. Capture the whole map. Do it quadrant by quadrant
-**Rules:**
 
+**Rules:**
 1. To capture quadrant build "Large banner on Pole"
 2. Each quadrant increase your gather rate for 3%
 3. If someone destroys your "Large banner on Pole" gather rate decreased
