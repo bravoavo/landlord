@@ -1,8 +1,8 @@
 ![image](https://github.com/bravoavo/LandLord/blob/main/rust-landlord.png?raw=true)
-LandLors is a modification for the original game. 
+Land Lord is a modification for the original game. 
 
+## Game Process
 
-## Game process
 **Goal:**
 1. Capture the whole map. Do it quadrant by quadrant
 
@@ -13,11 +13,9 @@ LandLors is a modification for the original game.
 4. Quadrants own shows on the game map
 5. The one quadrant the one "Large banner on Pole"
 
-## Chat comands
-* /lord - show your statistic
-* /lordclr - leave team
+## Chat Commands
 
-## Source
-[GitHub](https://github.com/bravoavo/LandLord) 
+* `/lord` - Show your statistics
+* `/lordclr` - Leave team
 
-Feel free to send merge requests
+Feel free to send merge requests.
