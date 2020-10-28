@@ -4,14 +4,14 @@ Land Lord is a modification for the original game.
 ## Game Process
 
 **Goal:**
-1. Capture the whole map. Do it quadrant by quadrant
+1. Take control of the entire map cell by cell
 
 **Rules:**
-1. To capture quadrant build "Large banner on Pole"
-2. Each quadrant increase your gather rate for 3%
+1. To capture a map cell build "Large banner on Pole"
+2. Each captured map cell increases your gather rate for 3%
 3. If someone destroys your "Large banner on Pole" gather rate decreased
-4. Quadrants own shows on the game map
-5. The one quadrant the one "Large banner on Pole"
+4. Cells owners shows on the game map
+5. The one cell the one "Large banner on Pole"
 
 ## Chat Commands
 
