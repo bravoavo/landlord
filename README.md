@@ -1,6 +1,11 @@
 ![image](https://github.com/bravoavo/LandLord/blob/main/rust-landlord.png?raw=true)
 Land Lord is a modification for the original game. 
 
+### Test server is online now!
+Look for **LandLord beta** in the server list Modded tab or connect directly from the console:
+
+`connect.client 185.237.97.147:28015`
+
 ## Game Process
 
 **Goal:**
@@ -18,4 +23,4 @@ Land Lord is a modification for the original game.
 * `/lord` - Show your statistics
 * `/lordclr` - Leave team
 
-Feel free to send merge requests.
+Feel free to share ideas and send merge requests.
