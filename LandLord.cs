@@ -12,8 +12,8 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("LandLord", "HunterXXI", "1.0.3")]
-    [Description("Seize lands. Draft")]
+    [Info("LandLord", "bravoavo", "1.0.3")]
+    [Description("Take control of the map")]
 
     class LandLord : RustPlugin
     {
@@ -22,19 +22,17 @@ namespace Oxide.Plugins
         ConfigData configData;
         private DynamicConfigFile data;
 
-        //Constant init
+        //Constant initialization
         readonly float size = 146.3f;
         readonly bool debug = true;
         readonly string zonenameprefix = "Zone";
         Color32 orange = new Color32(255, 157, 0, 1);
         readonly Color[] colorArray = new Color[] { Color.black, Color.white, Color.red, Color.blue, Color.green, Color.yellow, Color.cyan, Color.gray, new Color32(255, 157, 0, 1) };
         private Color colors;
-
         public Dictionary<ulong, HashSet<int[]>> flagi = new Dictionary<ulong, HashSet<int[]>>();
         public Dictionary<ulong, List<string>> quadrants = new Dictionary<ulong, List<string>>();
         public Dictionary<string, Vector3> poles = new Dictionary<string, Vector3>();
         public Dictionary<ulong, int> gatherMultiplier = new Dictionary<ulong, int>();
-        //player:teamleader
         public Dictionary<ulong, ulong> teamList = new Dictionary<ulong, ulong>();
 
         public Dictionary<string, MapMarkerGenericRadius> allmarkers = new Dictionary<string, MapMarkerGenericRadius>();
@@ -58,76 +56,9 @@ namespace Oxide.Plugins
             }
             var InitFile = Interface.Oxide.DataFileSystem.GetFile("LandLord");
             InitFile.WriteObject("Zone init has been complited");
-            //LoadZones();
         }
         #endregion
 
-        #region NoUse 
-        private void LoadZones()
-        {
-            int mapsize = (int)TerrainMeta.Size.x;
-            allmarkers.Clear();
-            string[] zonesarray = (string[])ZoneManager.Call("GetZoneIDs");
-            foreach (var zoneid in zonesarray)
-            {
-                var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zoneid);
-                float zoneradius = 10000 / mapsize; float markeralpha = 0.5f; colors = Color.red;
-                var mapMarker = GameManager.server.CreateEntity("assets/prefabs/tools/map/genericradiusmarker.prefab", zonelocation) as MapMarkerGenericRadius;
-                mapMarker.alpha = markeralpha;
-                mapMarker.color1 = colors;
-                mapMarker.color2 = colors;
-                mapMarker.radius = (float)Math.Round(zoneradius, 2);
-                mapMarker.Spawn();
-                mapMarker.SendUpdate();
-                if (!allmarkers.ContainsKey(zoneid))
-                {
-                    allmarkers.Add(zoneid, mapMarker);
-                }
-
-            }
-
-        }
-
-        /*
-timer.Every(5f, () =>
-{
-
-    var teamelement = UnityEngine.Object.FindObjectOfType<RelationshipManager>();
-    if (debug) Puts("Tims Hash " + teamelement.);
-});
-
-
-     if (player.currentTeam > 0)
-{
-    if (debug) Puts("Tim ID " + player.currentTeam);
-var teamelement = UnityEngine.Object.FindObjectOfType<RelationshipManager>();
-    foreach (var plt in teamelement.playerTeams)
-    {
-        if (debug) Puts("Tims " + plt.Key);
-}
-
-var team = teamelement.FindTeam(player.currentTeam);
-    foreach (var member in team.members)
-    {
-        if (debug) Puts("Tim member ID " + member);
-}
-    if (debug) Puts("Tim Leader ID " + team.teamLeader);
-
-}
-
-        void OnPluginLoaded(Plugin plugin)
-        {
-            if (ZoneManager)
-            {
-                if (!Interface.Oxide.DataFileSystem.ExistsDatafile("LandLord"))
-                {
-                    MyZonesInit();
-                }
-            }
-        }
-        */
-
-        #endregion
 
         #region InitPlugin
         private void OnServerInitialized()
@@ -182,8 +113,6 @@ var team = teamelement.FindTeam(player.currentTeam);
                     int color3 = rnd.Next(0, 8);
                     colorsArrayTmp = new int[] { color1, color2, color3 };
                 } while (!flagi[playerId].Add(colorsArrayTmp));
-                //configData.FlagiData.Add(playerId, new HashSet<int[]>());
-                //configData.FlagiData[playerId].Add(colorsArrayTmp);
             }
         }
 
@@ -322,13 +251,10 @@ var team = teamelement.FindTeam(player.currentTeam);
                     if (teamList.ContainsKey(ent.OwnerID)) { teampid = teamList[ent.OwnerID]; }
                     else teampid = ent.OwnerID;
                     quadrants[teampid].Remove(zoneid);
-                    //configData.QuadrantsData[teampid].Remove(zoneid);
                     poles.Remove(zoneid);
-                    //configData.PolesLocationData.Remove(zoneid);
                     if (gatherMultiplier.ContainsKey(teampid))
                     {
                         if (gatherMultiplier[teampid] > 0) gatherMultiplier[teampid]--;
-                        //if (configData.GatherRateData[teampid] > 0) configData.GatherRateData[teampid]--;
                     }
                     SaveData();
                 }
@@ -447,8 +373,6 @@ var team = teamelement.FindTeam(player.currentTeam);
 
         private void SpawnMarkerOnMap(Vector3 position, string curentZoneId)
         {
-            //Vector3 tmp_position1;
-            //tmp_position1 = new Vector3(-675, 0, 640);
             int mapsize = (int)TerrainMeta.Size.x;
             colors = Color.black;
             float zoneradius = (100000f / mapsize) * 0.02f;
@@ -457,7 +381,6 @@ var team = teamelement.FindTeam(player.currentTeam);
             mapMarker.alpha = markeralpha;
             mapMarker.color1 = colors;
             mapMarker.color2 = colors;
-            //mapMarker.radius = 1.2f;
             mapMarker.radius = (float)Math.Round(zoneradius, 2);
             mapMarker.Spawn();
             mapMarker.SendUpdate();
@@ -576,12 +499,6 @@ var team = teamelement.FindTeam(player.currentTeam);
                 poles = configData.PolesLocationData;
             }
 
-            /*
-             configData = dataF.ReadObject<ConfigData>();
-             Puts("Loaded {0} Flags", configData.FlagiData.Count);
-             flagi = configData.FlagiData;
-             Puts("Peregruzheno {0} Flags", flagi.Count);
-             */
         }
 
         private void SaveData()
