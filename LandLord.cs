@@ -12,7 +12,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("LandLord", "bravoavo", "1.0.3")]
+    [Info("Landlord", "bravoavo", "1.0.4")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -26,6 +26,7 @@ namespace Oxide.Plugins
         readonly float size = 146.3f;
         readonly bool debug = true;
         readonly string zonenameprefix = "Zone";
+        readonly string datafile_name = "Landlord.data";
         Color32 orange = new Color32(255, 157, 0, 1);
         readonly Color[] colorArray = new Color[] { Color.black, Color.white, Color.red, Color.blue, Color.green, Color.yellow, Color.cyan, Color.gray, new Color32(255, 157, 0, 1) };
         private Color colors;
@@ -38,7 +39,22 @@ namespace Oxide.Plugins
         public Dictionary<string, MapMarkerGenericRadius> allmarkers = new Dictionary<string, MapMarkerGenericRadius>();
         public Dictionary<string, List<MapMarkerGenericRadius>> flagmarkers = new Dictionary<string, List<MapMarkerGenericRadius>>();
 
+        #region Localization
+        private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
+        protected override void LoadDefaultMessages()
+        {
+            lang.RegisterMessages(new Dictionary<string, string>
+            {
+                ["LordStatus"] = "<color=orange>LANDLORD:</color> Grounds seized: {0} TeamID is: {1}",
+                ["LordStatusZero"] = "<color=orange>LANDLORD:</color> Grounds seized: 0 TeamID is: {0}",
+                ["TeamClearSuccess"] = "<color=orange>LANDLORD:</color> Team clear: Success!",
+                ["HaveNoTeam"] = "<color=orange>LANDLORD:</color> You are have no team!",
+                ["CellHasPole"] = "<color=orange>LANDLORD:</color> This map cell already has a pole! Destroy it before build a new one",
+                ["CellCaptured"] = "<color=orange>LANDLORD:</color> You deploy pole! Your gather rate increased!"
+            }, this);
+        }
 
+        #endregion Localization
 
         #region ZoneInitialization
         private void MyZonesInit()
@@ -54,25 +70,31 @@ namespace Oxide.Plugins
                     i++;
                 }
             }
-            var InitFile = Interface.Oxide.DataFileSystem.GetFile("LandLord");
-            InitFile.WriteObject("Zone init has been complited");
+            var InitFile = Interface.Oxide.DataFileSystem.GetFile(datafile_name);
+            //InitFile.WriteObject("Zone init has been complited");
+            InitFile.Save();
+      
         }
         #endregion
-
 
         #region InitPlugin
         private void OnServerInitialized()
         {
-            if (ZoneManager)
+            if (ZoneManager != null && ZoneManager.IsLoaded)
             {
-                if (!Interface.Oxide.DataFileSystem.ExistsDatafile("LandLord"))
+                if (!Interface.Oxide.DataFileSystem.ExistsDatafile(datafile_name))
                 {
                     MyZonesInit();
                 }
             }
-            if (Interface.Oxide.DataFileSystem.ExistsDatafile("LandLord.Data"))
+            else
             {
-                data = Interface.Oxide.DataFileSystem.GetDatafile("LandLord.Data");
+                PrintError("Missing plugin dependency Zone Manager: https://umod.org/plugins/zone-manager");
+                return;
+            }
+            if (Interface.Oxide.DataFileSystem.ExistsDatafile(datafile_name))
+            {
+                data = Interface.Oxide.DataFileSystem.GetDatafile(datafile_name);
             }
             LoadData();
         }
@@ -227,16 +249,18 @@ namespace Oxide.Plugins
         #endregion
 
         #region OxideHooks
-        void OnEntityKill(BaseNetworkable entity)
+        void OnEntityKill(BaseEntity entity)
         {
-            BaseEntity ent = (BaseEntity)entity;
-            if (ent.prefabID.ToString() == "3188315846")
+            if (entity.prefabID == 3188315846)
             {
-                if (debug) Puts("Entity kill - Prefab ID is " + ent.prefabID.ToString() + " Location " + ent.ServerPosition);
-                var zoneid = poles.Where(x => x.Value == ent.ServerPosition).FirstOrDefault().Key;
-                if (debug) Puts("Looking for zone id. Where function result is " + zoneid);
+                if (debug) Puts("Entity 'Banner on Pole' killed - Prefab ID is " + entity.prefabID.ToString() + " Location " + entity.ServerPosition);
+
+
+                //var zoneid = poles.Where(x => x.Value == entity.ServerPosition).FirstOrDefault().Key;
+                var zoneid = poles.FirstOrDefault(x => x.Value == entity.ServerPosition).Key;     
                 if (zoneid != null)
                 {
+                    if (debug) Puts("Looking for zone id by coordinates. Zoneid is " + zoneid);
                     if (allmarkers.ContainsKey(zoneid))
                     {
                         DeleteMarkerFromMap(allmarkers[zoneid]);
@@ -246,10 +270,10 @@ namespace Oxide.Plugins
                         allmarkers.Remove(zoneid);
                         flagmarkers.Remove(zoneid);
                     }
-                    if (debug) Puts("User ID " + ent.OwnerID);
+                    if (debug) Puts("User ID " + entity.OwnerID);
                     ulong teampid;
-                    if (teamList.ContainsKey(ent.OwnerID)) { teampid = teamList[ent.OwnerID]; }
-                    else teampid = ent.OwnerID;
+                    if (teamList.ContainsKey(entity.OwnerID)) { teampid = teamList[entity.OwnerID]; }
+                    else teampid = entity.OwnerID;
                     quadrants[teampid].Remove(zoneid);
                     poles.Remove(zoneid);
                     if (gatherMultiplier.ContainsKey(teampid))
@@ -258,6 +282,7 @@ namespace Oxide.Plugins
                     }
                     SaveData();
                 }
+                else if (debug) Puts("Zone id not found");
             }
         }
 
@@ -268,16 +293,16 @@ namespace Oxide.Plugins
             BasePlayer player = plan.GetOwnerPlayer();
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             var entity = go.ToBaseEntity();
-            if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID.ToString() + " zone ID is " + zids[0]);
+            if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID + " zone ID is " + zids[0]);
             //3188315846
             string curentZoneId = zids[0];
-            if (entity.prefabID.ToString() == "3188315846" && curentZoneId != null)
+            if (entity.prefabID == 3188315846 && curentZoneId != null)
             {
                 if (debug) Puts("Prefab is found and zone exists");
                 if (poles.ContainsKey(curentZoneId))
                 {
-                    player.ChatMessage("<color=orange>LANDLORD:</color> This Zone already has a pole! Destroy it before build a new one.");
-                    //entity.Kill(BaseNetworkable.DestroyMode.Gib);      
+                    entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
+                    player.ChatMessage(Lang("CellHasPole", player.UserIDString));
                     return;
                 }
 
@@ -321,7 +346,7 @@ namespace Oxide.Plugins
                 var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", curentZoneId);
                 SpawnMarkerOnMap(zonelocation, curentZoneId);
                 SpawnFlag(zonelocation, curentZoneId, teampid);
-                player.ChatMessage("<color=orange>LANDLORD:</color> You deploy pole! Your gather rate increased!");
+                player.ChatMessage(Lang("CellCaptured", player.UserIDString));
                 SaveData();
             }
             else if (debug) Puts("Error! Not found zone ID or prefab");
@@ -342,13 +367,13 @@ namespace Oxide.Plugins
             }
         }
 
-        object OnDispenserGather(ResourceDispenser dispenser, BaseEntity entity, Item item)
+        object OnDispenserGather(ResourceDispenser dispenser, BasePlayer player, Item item)
         {
             ulong teampid;
-            BasePlayer player = entity.ToPlayer();
+            //BasePlayer player = entity.ToPlayer();
             if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
             else teampid = player.userID;
-            if (debug) Puts("Start amount" + item.amount);
+            if (debug) Puts("Dispenser. Start amount is " + item.amount);
             if (gatherMultiplier.ContainsKey(teampid))
             {
                 if (gatherMultiplier[teampid] > 0)
@@ -490,7 +515,7 @@ namespace Oxide.Plugins
             }
             catch
             {
-                if (debug) Puts("Existing configuration not found. Create a new configuration.");
+                if (debug) Puts("Existing configuration not found. A new configuration creating.");
                 configData = new ConfigData();
                 quadrants = configData.QuadrantsData;
                 flagi = configData.FlagiData;
@@ -503,7 +528,7 @@ namespace Oxide.Plugins
 
         private void SaveData()
         {
-            data = Interface.Oxide.DataFileSystem.GetDatafile("LandLord.Data");
+            data = Interface.Oxide.DataFileSystem.GetDatafile(datafile_name);
             data.WriteObject(configData);
         }
 
@@ -514,17 +539,15 @@ namespace Oxide.Plugins
         private void CmdChatLordStats(BasePlayer player, string command, string[] args)
         {
             ulong teampid;
-            if (teamList.ContainsKey(player.userID))
-            {
-                teampid = teamList[player.userID];
-            }
+            if (teamList.ContainsKey(player.userID)) teampid = teamList[player.userID];
             else teampid = player.userID;
 
             if (gatherMultiplier.ContainsKey(teampid) && gatherMultiplier[teampid] > 0)
             {
-                player.ChatMessage("<color=orange>LANDLORD:</color> Grounds seized: " + gatherMultiplier[teampid] + " TeamID is: " + teampid);
+                player.ChatMessage(Lang("LordStatus", player.UserIDString, gatherMultiplier[teampid].ToString(), teampid.ToString()));
             }
-            else player.ChatMessage("<color=orange>LANDLORD:</color> Grounds seized: 0 TeamID is: " + teampid);
+            else player.ChatMessage(Lang("LordStatusZero", player.UserIDString, teampid.ToString()));
+
         }
         [ChatCommand("lordclr")]
         private void CmdChatLordCls(BasePlayer player, string command, string[] args)
@@ -532,14 +555,12 @@ namespace Oxide.Plugins
             if (teamList.ContainsKey(player.userID))
             {
                 teamList.Remove(player.userID);
-                player.ChatMessage("<color=orange>LANDLORD:</color> Team clear: Success!");
+                player.ChatMessage(Lang("TeamClearSuccess", player.UserIDString));
                 LordTeamInit(player);
             }
-            else
-            {
-                player.ChatMessage("<color=orange>LANDLORD:</color> You are have no team!");
-            }
+            else player.ChatMessage(Lang("HaveNoTeam", player.UserIDString));
         }
         #endregion
+
     }
 }
