@@ -9,10 +9,9 @@ using Oxide.Core;
 using System;
 using Oxide.Core.Configuration;
 
-
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.4")]
+    [Info("Landlord", "bravoavo", "1.0.5")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -23,8 +22,8 @@ namespace Oxide.Plugins
         private DynamicConfigFile data;
 
         //Constant initialization
-        readonly float size = 146.3f;
-        readonly bool debug = true;
+        readonly float size = 146.33f;
+        readonly bool debug = false;
         readonly string zonenameprefix = "Zone";
         readonly string datafile_name = "Landlord.data";
         Color32 orange = new Color32(255, 157, 0, 1);
@@ -71,7 +70,6 @@ namespace Oxide.Plugins
                 }
             }
             var InitFile = Interface.Oxide.DataFileSystem.GetFile(datafile_name);
-            //InitFile.WriteObject("Zone init has been complited");
             InitFile.Save();
       
         }
@@ -149,9 +147,7 @@ namespace Oxide.Plugins
                     if (!teamList.ContainsKey(team.teamLeader))
                     {
                         teamList.Add(player.userID, team.teamLeader);
-                        //configData.TeamListData.Add(player.userID, team.teamLeader);
-                        if (debug) Puts("Has team now!");
-                        //reload zone to new team
+                        if (debug) Puts("You has team now!");
                         if (quadrants.ContainsKey(player.userID) && player.userID != team.teamLeader)
                         {
                             foreach (var zone in quadrants[player.userID])
@@ -164,8 +160,6 @@ namespace Oxide.Plugins
                                 {
                                     quadrants.Add(team.teamLeader, new List<string>());
                                     quadrants[team.teamLeader].Add(zone);
-                                    //configData.QuadrantsData.Add(team.teamLeader, new List<string>());
-                                    //configData.QuadrantsData[team.teamLeader].Add(zone);
                                 }
                                 else
                                 {
@@ -174,10 +168,8 @@ namespace Oxide.Plugins
                                     else
                                     {
                                         quadrants[team.teamLeader].Add(zone);
-                                        //configData.QuadrantsData[team.teamLeader].Add(zone);
                                     }
                                 }
-                                //increase gather rate
                                 if (!gatherMultiplier.ContainsKey(team.teamLeader)) gatherMultiplier.Add(team.teamLeader, 1);
                                 else gatherMultiplier[team.teamLeader]++;
                                 var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zone);
@@ -185,7 +177,6 @@ namespace Oxide.Plugins
                             }
                             quadrants.Remove(player.userID);
                             gatherMultiplier.Remove(player.userID);
-                            //configData.QuadrantsData.Remove(player.userID);
                             SaveData();
                         }
                         SaveData();
@@ -193,11 +184,9 @@ namespace Oxide.Plugins
                     }
                     else
                     {
-                        //berem lidera u lidera :)
                         var currentLeader = teamList[team.teamLeader];
                         teamList.Add(player.userID, currentLeader);
-                        //configData.TeamListData.Add(player.userID, currentLeader);
-                        if (debug) Puts("Has team now!");
+                        if (debug) Puts("You has team now!");
                         if (quadrants.ContainsKey(player.userID))
                         {
                             foreach (var zone in quadrants[player.userID])
@@ -210,8 +199,6 @@ namespace Oxide.Plugins
                                 {
                                     quadrants.Add(currentLeader, new List<string>());
                                     quadrants[currentLeader].Add(zone);
-                                    //configData.QuadrantsData.Add(currentLeader, new List<string>());
-                                    //configData.QuadrantsData[currentLeader].Add(zone);
                                 }
                                 else
                                 {
@@ -220,10 +207,8 @@ namespace Oxide.Plugins
                                     else
                                     {
                                         quadrants[currentLeader].Add(zone);
-                                        //configData.QuadrantsData[currentLeader].Add(zone);
                                     }
                                 }
-                                //increase gather rate
                                 if (!gatherMultiplier.ContainsKey(currentLeader)) gatherMultiplier.Add(currentLeader, 1);
                                 else gatherMultiplier[currentLeader]++;
                                 var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zone);
@@ -231,7 +216,6 @@ namespace Oxide.Plugins
                             }
                             quadrants.Remove(player.userID);
                             gatherMultiplier.Remove(player.userID);
-                            //configData.QuadrantsData.Remove(player.userID);
                             SaveData();
                         }
                         SaveData();
@@ -241,7 +225,6 @@ namespace Oxide.Plugins
                 else
                 {
                     timer.In(5, () => LordTeamInit(player));
-                    //Puts("Has no team");
                     return;
                 }
             }
@@ -254,9 +237,6 @@ namespace Oxide.Plugins
             if (entity.prefabID == 3188315846)
             {
                 if (debug) Puts("Entity 'Banner on Pole' killed - Prefab ID is " + entity.prefabID.ToString() + " Location " + entity.ServerPosition);
-
-
-                //var zoneid = poles.Where(x => x.Value == entity.ServerPosition).FirstOrDefault().Key;
                 var zoneid = poles.FirstOrDefault(x => x.Value == entity.ServerPosition).Key;     
                 if (zoneid != null)
                 {
@@ -289,7 +269,6 @@ namespace Oxide.Plugins
 
         void OnEntityBuilt(Planner plan, GameObject go)
         {
-            // Puts("Player init works " + quadrants.Count());
             BasePlayer player = plan.GetOwnerPlayer();
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             var entity = go.ToBaseEntity();
@@ -309,14 +288,10 @@ namespace Oxide.Plugins
                 ulong teampid;
                 if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
                 else teampid = player.userID;
-                //ADDING ZONEID TO PLAYER
                 if (!quadrants.ContainsKey(teampid))
                 {
                     quadrants.Add(teampid, new List<string>());
                     quadrants[teampid].Add(curentZoneId);
-                    //configData.QuadrantsData.Add(teampid, new List<string>());
-                    //configData.QuadrantsData[teampid].Add(curentZoneId);
-
                 }
                 else
                 {
@@ -325,23 +300,18 @@ namespace Oxide.Plugins
                     else
                     {
                         quadrants[teampid].Add(curentZoneId);
-                        //configData.QuadrantsData[teampid].Add(curentZoneId);
                     }
                 }
                 if (!gatherMultiplier.ContainsKey(teampid))
                 {
                     gatherMultiplier.Add(teampid, 1);
-                    //configData.GatherRateData.Add(teampid, 1);
                 }
                 else
                 {
                     gatherMultiplier[teampid]++;
-                    //configData.GatherRateData[teampid]++;
                 }
                 poles.Add(curentZoneId, entity.ServerPosition);
                 if (configData.PolesLocationData.ContainsKey(curentZoneId)) Puts("Pole exists");
-                // configData.PolesLocationData.Add(curentZoneId, entity.ServerPosition);
-
                 if (debug) Puts("Server position " + entity.ServerPosition.ToString());
                 var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", curentZoneId);
                 SpawnMarkerOnMap(zonelocation, curentZoneId);
@@ -370,7 +340,6 @@ namespace Oxide.Plugins
         object OnDispenserGather(ResourceDispenser dispenser, BasePlayer player, Item item)
         {
             ulong teampid;
-            //BasePlayer player = entity.ToPlayer();
             if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
             else teampid = player.userID;
             if (debug) Puts("Dispenser. Start amount is " + item.amount);
