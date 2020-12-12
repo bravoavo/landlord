@@ -18,4 +18,18 @@ Land Lord is a modification for the original game.
 * `/lord` - Show your statistics
 * `/lordclr` - Leave team
 
+## Install, Backup and Re-Install
+The plugin works with Zona Manager! Initialization has two simple steps:
+- Getting the chosen map size and generating a bunch of zones (each zone equals the game map cell)
+- Initialize Landlord by creating empty Landlord.data config file under ../oxide/data directory
+
+All sensitive data stored at Landlord.data file. All data tied to ZoneManager data and the game map siz.e
+
+Backup-restore functional is not emplimeted yet, but you can try: 
+- To backup all flags save Landlord.data config file
+- To clear all flags just delete Landlord.data config file
+Your backup will work only with your server backup. You can't bring up a new server instance and copy Landlord.data there.
+
+We working on a full-working restore tool.
+
 Feel free to share ideas and send merge requests.
