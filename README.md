@@ -23,6 +23,8 @@ The plugin works with Zona Manager! Initialization has two simple steps:
 - Getting the chosen map size and generating a bunch of zones (each zone equals the game map cell)
 - Initialize Landlord by creating empty Landlord.data config file under ../oxide/data directory
 
+The first initialization takes time up to 30 seconds. It depends on your map size.
+
 All sensitive data stored at Landlord.data file. All data tied to ZoneManager data and the game map siz.e
 
 Backup-restore functional is not emplimeted yet, but you can try: 
