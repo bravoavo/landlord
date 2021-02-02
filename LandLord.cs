@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.6")]
+    [Info("Landlord", "bravoavo", "1.0.7")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -281,15 +281,13 @@ namespace Oxide.Plugins
 
         void OnEntityBuilt(Planner plan, GameObject go)
         {
-
             BasePlayer player = plan.GetOwnerPlayer();
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             var entity = go.ToBaseEntity();
-            if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID + " zone ID is " + zids[0]);
-            string curentZoneId = zids[0];
-            if (entity.prefabID == bannerprefabid && curentZoneId != null)
+            if (entity.prefabID == bannerprefabid && zids.Length > 0)
             {
-                if (debug) Puts("Prefab is found and zone exists");
+                if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID + " zone ID is " + zids[0]);
+                string curentZoneId = zids[0];
                 if (poles.ContainsKey(curentZoneId))
                 {
                     entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
@@ -334,7 +332,7 @@ namespace Oxide.Plugins
                 player.ChatMessage(Lang("CellCaptured", player.UserIDString));
                 SaveData();
             }
-            else if (debug) Puts("Error! Not found zone ID or prefab");
+            else if (debug) Puts("Error! Not found zone ID or prefab!");
         }
 
         void OnCollectiblePickup(Item item, BasePlayer player)
