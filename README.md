@@ -13,6 +13,13 @@ Land Lord is a modification for the original game.
 4. Cells owners shows on the game map
 5. The one cell the one "Large banner on Pole"
 
+## Permissions
+> This plugin uses Oxide's permission system. To assign a permission, use oxide.grant <user or group> <name or steam id> <permission>. To remove a permission, use oxide.revoke <user or group> <name or steam id> <permission>.
+landlord.admin -- Allows player to use the chat commands starts with /lordadmin 
+
+* `/lordadmin no_trespass_gather` - Get gather bonus only in not captured cells or cells you own.
+* `/lordadmin only_connected_zones` - Allow to capture only connected cells
+
 ## Chat Commands
 
 * `/lord` - Show your statistics

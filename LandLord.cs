@@ -12,7 +12,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.7")]
+    [Info("Landlord", "bravoavo", "1.0.8")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -26,11 +26,14 @@ namespace Oxide.Plugins
         readonly uint bannerprefabid = 3188315846;
         readonly float size = 146.33f;
         readonly bool debug = false;
+        int notrespassgather = 1;
+        int onlyconnected = 1;
         readonly string zonenameprefix = "Zone";
         readonly string datafile_name = "Landlord.data";
-        Color32 orange = new Color32(255, 157, 0, 1);
+        private const string permUse = "landlord.admin";
         readonly Color[] colorArray = new Color[] { Color.black, Color.white, Color.red, Color.blue, Color.green, Color.yellow, Color.cyan, Color.gray, new Color32(255, 157, 0, 1) };
         private Color colors;
+        public Dictionary<string, int> currentsettings = new Dictionary<string, int>();
         public Dictionary<ulong, HashSet<int[]>> flagi = new Dictionary<ulong, HashSet<int[]>>();
         public Dictionary<ulong, List<string>> quadrants = new Dictionary<ulong, List<string>>();
         public Dictionary<string, Vector3> poles = new Dictionary<string, Vector3>();
@@ -47,10 +50,14 @@ namespace Oxide.Plugins
             lang.RegisterMessages(new Dictionary<string, string>
             {
                 ["LordStatus"] = "<color=orange>LANDLORD:</color> Grounds seized: {0} TeamID is: {1}",
+                ["UsageAdmin"] = "<color=orange>LANDLORD:</color> Usage: /lordadmin no_trespass_gather | only_connected_zones | show_settings  ",
+                ["NoPermission"] = "<color=orange>LANDLORD:</color> You do not have the permissions to use this command.",
                 ["LordStatusZero"] = "<color=orange>LANDLORD:</color> Grounds seized: 0 TeamID is: {0}",
                 ["TeamClearSuccess"] = "<color=orange>LANDLORD:</color> Team clear: Success!",
                 ["HaveNoTeam"] = "<color=orange>LANDLORD:</color> You are have no team!",
                 ["CellHasPole"] = "<color=orange>LANDLORD:</color> This map cell already has a pole! Destroy it before build a new one",
+                ["SettingsChanged"] = "<color=orange>LANDLORD:</color> Settings changed!",
+                ["CurrentSettings"] = "< color = orange > LANDLORD:</ color > Current settings. 1 means enabled, 0 means desabled. no_trespass_gather {0}, only_connected_zones {1}",
                 ["CellCaptured"] = "<color=orange>LANDLORD:</color> You deploy pole! Your gather rate increased!"
             }, this);
         }
@@ -81,6 +88,7 @@ namespace Oxide.Plugins
         #region InitPlugin
         private void OnServerInitialized()
         {
+            permission.RegisterPermission(permUse, this);
             if (ZoneManager != null && ZoneManager.IsLoaded)
             {
                 if (!Interface.Oxide.DataFileSystem.ExistsDatafile(datafile_name))
@@ -338,34 +346,86 @@ namespace Oxide.Plugins
         void OnCollectiblePickup(Item item, BasePlayer player)
         {
             ulong teampid;
+            string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
+            string match = null;
             if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
             else teampid = player.userID;
-            if (gatherMultiplier.ContainsKey(teampid))
+            if (currentsettings["notrespassgather"] == 1)
             {
-                if (gatherMultiplier[teampid] > 0)
+                if (zids.Length > 0)
                 {
-                    float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
-                    item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                    string curentZoneId = zids[0];
+                    match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
+                    if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
+                    {
+                        if (gatherMultiplier.ContainsKey(teampid))
+                        {
+                            if (gatherMultiplier[teampid] > 0)
+                            {
+                                float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                                item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                            }
+                        }
+                    }
                 }
             }
+            else
+            {
+                if (gatherMultiplier.ContainsKey(teampid))
+                {
+                    if (gatherMultiplier[teampid] > 0)
+                    {
+                        float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                        item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                    }
+                }
+            }
+
         }
 
         object OnDispenserGather(ResourceDispenser dispenser, BasePlayer player, Item item)
         {
             ulong teampid;
-
+            string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
+            string match = null;
             if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
             else teampid = player.userID;
             if (debug) Puts("Dispenser. Start amount is " + item.amount);
-            if (gatherMultiplier.ContainsKey(teampid))
+            if (currentsettings["notrespassgather"] == 1)
             {
-                if (gatherMultiplier[teampid] > 0)
+                if (zids.Length > 0)
                 {
-                    float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
-                    if (debug) Puts("Multiplier is " + multiplier);
-                    item.amount = (int)(item.amount + 5 + item.amount * multiplier);
+                    string curentZoneId = zids[0];
+                    match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
+
+                    if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
+                    {
+                        if (gatherMultiplier.ContainsKey(teampid))
+                        {
+                            if (gatherMultiplier[teampid] > 0)
+                            {
+                                float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                                if (debug) Puts("Multiplier is " + multiplier);
+                                item.amount = (int)(item.amount + 5 + item.amount * multiplier);
+                            }
+                        }
+                    }
+                }
+
+            }
+            else
+            {
+                if (gatherMultiplier.ContainsKey(teampid))
+                {
+                    if (gatherMultiplier[teampid] > 0)
+                    {
+                        float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                        if (debug) Puts("Multiplier is " + multiplier);
+                        item.amount = (int)(item.amount + 5 + item.amount * multiplier);
+                    }
                 }
             }
+
             return null;
         }
 
@@ -460,6 +520,7 @@ namespace Oxide.Plugins
             public Dictionary<string, Vector3> PolesLocationData = new Dictionary<string, Vector3>();
             public Dictionary<ulong, int> GatherRateData = new Dictionary<ulong, int>();
             public Dictionary<ulong, ulong> TeamListData = new Dictionary<ulong, ulong>();
+            public Dictionary<string, int> LandlordSettings = new Dictionary<string, int>();
         }
 
         private void LoadData()
@@ -469,6 +530,7 @@ namespace Oxide.Plugins
             gatherMultiplier.Clear();
             teamList.Clear();
             poles.Clear();
+            currentsettings.Clear();
             try
             {
                 if (debug) Puts("A try to use existing configuration");
@@ -478,6 +540,7 @@ namespace Oxide.Plugins
                 gatherMultiplier = configData.GatherRateData;
                 teamList = configData.TeamListData;
                 poles = configData.PolesLocationData;
+                currentsettings = configData.LandlordSettings;
                 if (quadrants.Count > 0)
                 {
                     foreach (var marker in UnityEngine.Object.FindObjectsOfType<MapMarkerGenericRadius>())
@@ -495,6 +558,14 @@ namespace Oxide.Plugins
                     }
 
                 }
+                if (!currentsettings.ContainsKey("notrespassgather"))
+                {
+                    currentsettings["notrespassgather"] = notrespassgather;              
+                }
+                if (!currentsettings.ContainsKey("onlyconnected"))
+                {
+                    currentsettings["onlyconnected"] = onlyconnected;
+                }
             }
             catch
             {
@@ -505,6 +576,9 @@ namespace Oxide.Plugins
                 gatherMultiplier = configData.GatherRateData;
                 teamList = configData.TeamListData;
                 poles = configData.PolesLocationData;
+                currentsettings = configData.LandlordSettings;
+                currentsettings["notrespassgather"] = notrespassgather;
+                currentsettings["onlyconnected"] = onlyconnected;
             }
 
         }
@@ -542,6 +616,63 @@ namespace Oxide.Plugins
                 LordTeamInit(player);
             }
             else player.ChatMessage(Lang("HaveNoTeam", player.UserIDString));
+        }
+
+        [ChatCommand("lordadmin")]
+        void LordAdminCommand(BasePlayer player, string command, string[] args)
+        {
+            if (!permission.UserHasPermission(player.UserIDString, permUse))
+            {
+                player.ChatMessage(Lang("NoPermission", player.UserIDString));
+                return;
+            }
+            if (debug) Puts("Args lenght " + args.Length);
+            if (args.Length > 0)
+            {
+                switch (args[0])
+                {
+                    default:
+                        player.ChatMessage(Lang("Usage", player.UserIDString));
+                        break;
+                    case "no_trespass_gather":
+                        if (currentsettings["notrespassgather"] == 1)
+                        {
+                            currentsettings["notrespassgather"] = 0;
+                        }
+                        else
+                        {
+                            currentsettings["notrespassgather"] = 1;
+                        }
+                        player.ChatMessage(Lang("SettingsChanged", player.UserIDString)); 
+                        SaveData();
+                        break;
+
+                    case "only_connected_zones":
+                        if (currentsettings["onlyconnected"] == 1)
+                        {
+                            currentsettings["onlyconnected"] = 0;
+                        }
+                        else
+                        {
+                            currentsettings["onlyconnected"] = 1;
+                        }
+                        player.ChatMessage(Lang("SettingsChanged", player.UserIDString));
+                        SaveData();
+                        break;
+
+                    case "show_settings":
+                        player.ChatMessage(Lang("CurrentSettings", player.UserIDString, currentsettings["notrespassgather"], currentsettings["onlyconnected"]));
+                        SaveData();
+                        break;
+                }
+
+                return;
+            }
+            else
+            {
+                player.ChatMessage(Lang("UsageAdmin", player.UserIDString));
+                return;
+            }
         }
         #endregion
 
