@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.8")]
+    [Info("Landlord", "bravoavo", "1.0.9")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -355,6 +355,7 @@ namespace Oxide.Plugins
                 if (zids.Length > 0)
                 {
                     string curentZoneId = zids[0];
+                    if (!quadrants.ContainsKey(teampid)) return;
                     match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
                     if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
                     {
@@ -396,6 +397,7 @@ namespace Oxide.Plugins
                 if (zids.Length > 0)
                 {
                     string curentZoneId = zids[0];
+                    if (!quadrants.ContainsKey(teampid)) return null;
                     match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
 
                     if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
