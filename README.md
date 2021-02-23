@@ -14,12 +14,13 @@ Land Lord is a modification for the original game.
 5. The one cell the one "Large banner on Pole"
 
 ## Permissions
-> This plugin uses Oxide's permission system. To assign a permission, use oxide.grant <user or group> <name or steam id> <permission>. To remove a permission, use oxide.revoke <user or group> <name or steam id> <permission>.
+
 landlord.admin -- Allows player to use the chat commands starts with /lordadmin 
 
-* `/lordadmin no_trespass_gather` - Get gather bonus only in not captured cells or cells you own.
-* `/lordadmin only_connected_zones` - Allow to capture only connected cells
-
+* `/lordadmin notrespass enable` - Get gather bonus only in not captured cells or cells you own.
+* `/lordadmin onlyconnected enable` - Allow to capture only connected cells.
+* `/lordadmin settings` - Show current settings of notrespass and onlyconnected modes.
+	
 ## Chat Commands
 
 * `/lord` - Show your statistics
@@ -32,7 +33,7 @@ The plugin works with Zona Manager! Initialization has two simple steps:
 
 The first initialization takes time up to 30 seconds. It depends on your map size.
 
-All sensitive data stored at Landlord.data file. All data tied to ZoneManager data and the game map siz.e
+All sensitive data stored at Landlord.data file. All data tied to ZoneManager data and the game map size
 
 Backup-restore functional is not emplimeted yet, but you can try: 
 - To backup all flags save Landlord.data config file
