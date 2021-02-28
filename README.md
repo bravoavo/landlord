@@ -8,7 +8,7 @@ Land Lord is a modification for the original game.
 
 **Rules:**
 1. To capture a map cell build "Large banner on Pole"
-2. Each captured map cell increases your gather rate for 3%
+2. Each captured map cell increases your gather rate for 3% by default
 3. If someone destroys your "Large banner on Pole" gather rate decreased
 4. Cells owners shows on the game map
 5. The one cell the one "Large banner on Pole"
@@ -17,8 +17,10 @@ Land Lord is a modification for the original game.
 
 landlord.admin -- Allows player to use the chat commands starts with /lordadmin 
 
-* `/lordadmin notrespass enable` - Get gather bonus only in not captured cells or cells you own.
-* `/lordadmin onlyconnected enable` - Allow to capture only connected cells.
+* `/lordadmin notrespass enable|disable` - Get gather bonus only in not captured cells or cells you own. Enabled by default.
+* `/lordadmin onlyconnected enable|disable` - Allow to capture only connected cells. Enabled by default.
+* `/lordadmin graycircles enable|disable` - Show gray circles on captured cells. Enabled by default.
+* `/lordadmin gatherratio [from 1 to 1000]` - Set gather ratio in percentage. Default 3.
 * `/lordadmin settings` - Show current settings of notrespass and onlyconnected modes.
 	
 ## Chat Commands

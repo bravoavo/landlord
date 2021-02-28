@@ -12,7 +12,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.10")]
+    [Info("Landlord", "bravoavo", "1.0.11")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -28,6 +28,8 @@ namespace Oxide.Plugins
         readonly bool debug = false;
         int notrespassgather = 1;
         int onlyconnected = 1;
+        int gatherratio = 3;
+        int graycircles = 1;
         readonly string zonenameprefix = "LandlordZone";
         readonly string datafile_name = "Landlord.data";
         private const string permUse = "landlord.admin";
@@ -50,16 +52,18 @@ namespace Oxide.Plugins
             lang.RegisterMessages(new Dictionary<string, string>
             {
                 ["LordStatus"] = "<color=orange>LANDLORD:</color> Grounds seized: {0} TeamID is: {1}",
-                ["UsageAdmin"] = "<color=orange>LANDLORD:</color> Usage: /lordadmin notrespass | onlyconnected | settings",
+                ["UsageAdmin"] = "<color=orange>LANDLORD:</color> Usage:\n /lordadmin notrespass enable|disable \n /lordadmin onlyconnected enable|disable \n /lordadmin graycircles enable|disable \n /lordadmin gatherratio [from 1 to 1000] \n /lordadmin settings",
                 ["NoPermission"] = "<color=orange>LANDLORD:</color> You do not have the permissions to use this command.",
                 ["LordStatusZero"] = "<color=orange>LANDLORD:</color> Grounds seized: 0 TeamID is: {0}",
                 ["TeamClearSuccess"] = "<color=orange>LANDLORD:</color> Team clear: Success!",
                 ["HaveNoTeam"] = "<color=orange>LANDLORD:</color> You are have no team!",
                 ["CellHasPole"] = "<color=orange>LANDLORD:</color> This map cell already has a pole! Destroy it before build a new one",
                 ["SettingsChanged"] = "<color=orange>LANDLORD:</color> Settings changed!",
-                ["CurrentSettings"] = "<color=orange>LANDLORD:</color> notrespass {0}, onlyconnected {1}",
+                ["CurrentSettings"] = "<color=orange>LANDLORD:</color> notrespass {0} \n onlyconnected {1} \n graycircles {2} \n gatherratio {3}",
                 ["NotrespassStatus"] = "<color=orange>LANDLORD:</color> notrespass mode is {0} to switch use /lordadmin notrespass enable|disable ",
-                ["OnlyconnectedStatus"] = "<color=orange>LANDLORD:</color> onlyconected mode is {0} to switch use /lordadmin onlyconected enable|disable",
+                ["OnlyconnectedStatus"] = "<color=orange>LANDLORD:</color> onlyconected mode is {0}",
+                ["GatherratioStatus"] = "<color=orange>LANDLORD:</color> Gatherratio set to {0}",
+                ["GraycirclesStatus"] = "<color=orange>LANDLORD:</color> graycircles is {0}",          
                 ["CellNotConnected"] = "<color=orange>LANDLORD:</color> The cell you try to capture not connected to another yours",
                 ["CellCaptured"] = "<color=orange>LANDLORD:</color> You deploy pole! Your gather rate increased!",
                 ["CellCapturedGlobal"] = "<color=orange>LANDLORD:</color> Player {0} has captured the cell {1}",
@@ -82,7 +86,7 @@ namespace Oxide.Plugins
                 int i = 100;
                 for (var z = -mapsize / 2 + size / 2; z <= mapsize / 2; z = z + size)
                 {
-                    string[] array = new string[] { "name", zonenameprefix + i, "size", "146.3 500 146.3", "location", x + " 0 " + z };
+                    string[] array = new string[] { "name", zonenameprefix + j + i, "size", "146.3 500 146.3", "location", x + " 0 " + z };
                     ZoneManager.Call("EraseZone", j + i.ToString().PadLeft(3, '0'));
                     ZoneManager.Call("CreateOrUpdateZone", j + i.ToString().PadLeft(3, '0'), array);
                     i++;
@@ -134,7 +138,7 @@ namespace Oxide.Plugins
             {
                 foreach (var zone in quadrat.Value)
                 {
-                    allmarkers[zone].SendUpdate();
+                    if (currentsettings["graycircles"] == 1) allmarkers[zone].SendUpdate();
                     flagmarkers[zone][0].SendUpdate();
                     flagmarkers[zone][1].SendUpdate();
                     flagmarkers[zone][2].SendUpdate();
@@ -229,8 +233,6 @@ namespace Oxide.Plugins
                                 {
                                     quadrants.Add(currentLeader, new List<string>());
                                     quadrants[currentLeader].Add(zone);
-
-
                                 }
                                 else
                                 {
@@ -274,16 +276,15 @@ namespace Oxide.Plugins
                 var zoneid = poles.FirstOrDefault(x => x.Value == entity.ServerPosition).Key;
                 if (zoneid != null)
                 {
-                    if (debug) Puts("Looking for zone id by coordinates. Zoneid is " + zoneid);
-                    if (allmarkers.ContainsKey(zoneid))
+                    if (currentsettings["graycircles"] == 1)
                     {
                         DeleteMarkerFromMap(allmarkers[zoneid]);
-                        DeleteMarkerFromMap(flagmarkers[zoneid][0]);
-                        DeleteMarkerFromMap(flagmarkers[zoneid][1]);
-                        DeleteMarkerFromMap(flagmarkers[zoneid][2]);
                         allmarkers.Remove(zoneid);
-                        flagmarkers.Remove(zoneid);
                     }
+                    DeleteMarkerFromMap(flagmarkers[zoneid][0]);
+                    DeleteMarkerFromMap(flagmarkers[zoneid][1]);
+                    DeleteMarkerFromMap(flagmarkers[zoneid][2]);                        
+                    flagmarkers.Remove(zoneid);                  
                     if (debug) Puts("User ID " + entity.OwnerID);
                     ulong teampid;
                     if (teamList.ContainsKey(entity.OwnerID)) { teampid = teamList[entity.OwnerID]; }
@@ -371,11 +372,9 @@ namespace Oxide.Plugins
                     gatherMultiplier[teampid]++;
                 }
                 poles.Add(curentZoneId, entity.ServerPosition);
-                if (configData.PolesLocationData.ContainsKey(curentZoneId)) Puts("Pole already exists in config");
-
                 if (debug) Puts("Server position " + entity.ServerPosition.ToString());
                 var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", curentZoneId);
-                SpawnMarkerOnMap(zonelocation, curentZoneId);
+                if (currentsettings["graycircles"] == 1) SpawnMarkerOnMap(zonelocation, curentZoneId);
                 SpawnFlag(zonelocation, curentZoneId, teampid);
                 player.ChatMessage(Lang("CellCaptured", player.UserIDString));
                 PrintToChat(Lang("CellCapturedGlobal", player.UserIDString, player.displayName, GetGrid(entity.ServerPosition)));
@@ -406,7 +405,7 @@ namespace Oxide.Plugins
                         {
                             if (gatherMultiplier[teampid] > 0)
                             {
-                                float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                                float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
                                 item.amount = (int)(item.amount + 1 + item.amount * multiplier);
                             }
                         }
@@ -419,7 +418,7 @@ namespace Oxide.Plugins
                 {
                     if (gatherMultiplier[teampid] > 0)
                     {
-                        float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                        float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
                         item.amount = (int)(item.amount + 1 + item.amount * multiplier);
                     }
                 }
@@ -450,7 +449,7 @@ namespace Oxide.Plugins
                         {
                             if (gatherMultiplier[teampid] > 0)
                             {
-                                float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                                float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
                                 if (debug) Puts("Multiplier is " + multiplier);
                                 item.amount = (int)(item.amount + 5 + item.amount * multiplier);
                             }
@@ -465,7 +464,7 @@ namespace Oxide.Plugins
                 {
                     if (gatherMultiplier[teampid] > 0)
                     {
-                        float multiplier = (float)gatherMultiplier[teampid] * 3 / 100;
+                        float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
                         if (debug) Puts("Multiplier is " + multiplier);
                         item.amount = (int)(item.amount + 5 + item.amount * multiplier);
                     }
@@ -498,6 +497,7 @@ namespace Oxide.Plugins
             mapMarker.radius = (float)Math.Round(zoneradius, 2);
             mapMarker.Spawn();
             mapMarker.SendUpdate();
+  
             if (!allmarkers.ContainsKey(curentZoneId))
             {
                 allmarkers.Add(curentZoneId, mapMarker);
@@ -598,7 +598,7 @@ namespace Oxide.Plugins
                         foreach (var zone in quadrat.Value)
                         {
                             var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zone);
-                            SpawnMarkerOnMap(zonelocation, zone);
+                            if (currentsettings["graycircles"] == 1) SpawnMarkerOnMap(zonelocation, zone);
                             SpawnFlag(zonelocation, zone, quadrat.Key);
                         }
                     }
@@ -611,6 +611,14 @@ namespace Oxide.Plugins
                 if (!currentsettings.ContainsKey("onlyconnected"))
                 {
                     currentsettings["onlyconnected"] = onlyconnected;
+                }
+                if (!currentsettings.ContainsKey("graycircles"))
+                {
+                    currentsettings["graycircles"] = graycircles;
+                }
+                if (!currentsettings.ContainsKey("gatherratio"))
+                {
+                    currentsettings["gatherratio"] = gatherratio;
                 }
                 if (debug) Puts("Existing configuration found and loaded");
             }
@@ -626,6 +634,8 @@ namespace Oxide.Plugins
                 currentsettings = configData.LandlordSettings;
                 currentsettings["notrespassgather"] = notrespassgather;
                 currentsettings["onlyconnected"] = onlyconnected;
+                currentsettings["graycircles"] = graycircles;
+                currentsettings["gatherratio"] = gatherratio;
             }
             SaveData();
         }
@@ -674,14 +684,15 @@ namespace Oxide.Plugins
                 return;
             }
             if (debug) Puts("Args lenght " + args.Length);
-            string cstatus, tstatus;
+            string cstatus, tstatus, gcstatus;
             if (args.Length > 0)
             {
                 switch (args[0])
                 {
                     default:
-                        player.ChatMessage(Lang("Usage", player.UserIDString));
+                        player.ChatMessage(Lang("UsageAdmin", player.UserIDString));
                         break;
+                    case "nt":
                     case "notrespass":
                         if (args.Length == 2)
                         {
@@ -692,7 +703,7 @@ namespace Oxide.Plugins
                         player.ChatMessage(Lang("NotrespassStatus", player.UserIDString, tstatus)); 
                         SaveData();
                         break;
-
+                    case "oc":
                     case "onlyconnected":
                         if (args.Length == 2)
                         {
@@ -703,13 +714,64 @@ namespace Oxide.Plugins
                         player.ChatMessage(Lang("OnlyconnectedStatus", player.UserIDString, cstatus));
                         SaveData();
                         break;
-
+                    case "gc":
+                    case "graycircles":
+                        if (args.Length == 2)
+                        {
+                            if (args[1] == "enable" && currentsettings["graycircles"] == 0)
+                            {
+                                foreach (var quadrat in quadrants)
+                                {
+                                    foreach (var zoneid in quadrat.Value)
+                                    {
+                                        var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zoneid);
+                                        if (debug) Puts("Spawn marker" + zoneid);
+                                        SpawnMarkerOnMap(zonelocation, zoneid);
+                                    }
+                                }
+                                currentsettings["graycircles"] = 1;                                
+                            }
+                            if (args[1] == "disable" && currentsettings["graycircles"] == 1)
+                            {
+                                foreach (var quadrat in quadrants)
+                                {
+                                    foreach (var zoneid in quadrat.Value)
+                                    {
+                                        if (debug) Puts("Delete marker" + zoneid);
+                                        DeleteMarkerFromMap(allmarkers[zoneid]);
+                                        allmarkers.Remove(zoneid);
+                                    }
+                                }
+                                currentsettings["graycircles"] = 0;
+                            }
+                        }
+                        gcstatus = (currentsettings["graycircles"] == 1) ? "Enabled" : "Disabled";
+                        player.ChatMessage(Lang("GraycirclesStatus", player.UserIDString, gcstatus));
+                        SaveData();
+                        break;
+                    case "gr":
+                    case "gatherratio":
+                        if (args.Length == 2)
+                        {
+                            int grtmp = Convert.ToInt32(args[1]);
+                            if (grtmp > 0 && grtmp < 1001)
+                            {
+                                currentsettings["gatherratio"] = grtmp;
+                            }
+                            else
+                            {
+                                player.ChatMessage(Lang("UsageAdmin", player.UserIDString));
+                            }
+                        }
+                        player.ChatMessage(Lang("GatherratioStatus", player.UserIDString, args[1]));
+                        SaveData();
+                        break;
+                    case "st":
                     case "settings":
-                        player.ChatMessage(Lang("CurrentSettings", player.UserIDString, tstatus = (currentsettings["notrespassgather"] == 1) ? "Enabled" : "Disabled", cstatus = (currentsettings["onlyconnected"] == 1) ? "Enabled" : "Disabled"));
+                        player.ChatMessage(Lang("CurrentSettings", player.UserIDString, tstatus = (currentsettings["notrespassgather"] == 1) ? "Enabled" : "Disabled", cstatus = (currentsettings["onlyconnected"] == 1) ? "Enabled" : "Disabled", gcstatus = (currentsettings["graycircles"] == 1) ? "Enabled" : "Disabled", currentsettings["gatherratio"]));
                         SaveData();
                         break;
                 }
-
                 return;
             }
             else
