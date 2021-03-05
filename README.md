@@ -13,6 +13,12 @@ Land Lord is a modification for the original game.
 4. Cells owners shows on the game map
 5. The one cell the one "Large banner on Pole"
 
+## Clans plugon support
+
+The plugin supports the Clans plugin. Clan members share gather same rate and same clan flag. If a member captures a cell it will increase the clan gater rate.  
+The clan flag is a clan owner flag, so if the owner leaves the clan, he takes all flags with him. (!) CAUTION Change a clan leader can lead to unstable work.
+
+
 ## Permissions
 
 landlord.admin -- Allows player to use the chat commands starts with /lordadmin 

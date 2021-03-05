@@ -1,24 +1,22 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
-using Oxide.Core.Plugins;
-using UnityEngine;
-using Oxide.Core;
 using System;
+using UnityEngine;
+using Oxide.Core.Plugins;
+using Oxide.Core;
 using Oxide.Core.Configuration;
 
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.11")]
+    [Info("Landlord", "bravoavo", "1.0.12")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
     {
 
-        [PluginReference] Plugin ZoneManager;
+        [PluginReference] Plugin ZoneManager, Clans;
         ConfigData configData;
         private DynamicConfigFile data;
 
@@ -40,7 +38,7 @@ namespace Oxide.Plugins
         public Dictionary<ulong, List<string>> quadrants = new Dictionary<ulong, List<string>>();
         public Dictionary<string, Vector3> poles = new Dictionary<string, Vector3>();
         public Dictionary<ulong, int> gatherMultiplier = new Dictionary<ulong, int>();
-        public Dictionary<ulong, ulong> teamList = new Dictionary<ulong, ulong>();
+        public Dictionary<string, ulong> teamList = new Dictionary<string, ulong>();
 
         public Dictionary<string, MapMarkerGenericRadius> allmarkers = new Dictionary<string, MapMarkerGenericRadius>();
         public Dictionary<string, List<MapMarkerGenericRadius>> flagmarkers = new Dictionary<string, List<MapMarkerGenericRadius>>();
@@ -107,6 +105,11 @@ namespace Oxide.Plugins
         private void OnServerInitialized()
         {
             permission.RegisterPermission(permUse, this);
+            if (Clans == null || !Clans.IsLoaded)
+            {
+                PrintError("Missing plugin dependency Clans: https://umod.org/plugins/clans");
+                return;
+            }
             if (ZoneManager != null && ZoneManager.IsLoaded)
             {
                 if (!Interface.Oxide.DataFileSystem.ExistsDatafile(datafile_name))
@@ -133,7 +136,6 @@ namespace Oxide.Plugins
         #region PlayerInit
         void OnPlayerSleepEnded(BasePlayer player)
         {
-            LordTeamInit(player);
             foreach (var quadrat in quadrants)
             {
                 foreach (var zone in quadrat.Value)
@@ -165,106 +167,8 @@ namespace Oxide.Plugins
             }
         }
 
-        private void LordTeamInit(BasePlayer player)
-        {
-            if (!teamList.ContainsKey(player.userID))
-            {
-                if (player.currentTeam > 0)
-                {
-                    //var teamelement = UnityEngine.Object.FindObjectOfType<RelationshipManager>();
-                    //var team = teamelement.FindTeam(player.currentTeam);
-                    RelationshipManager.PlayerTeam team = RelationshipManager.Instance.teams[player.currentTeam];
-                    if (!teamList.ContainsKey(team.teamLeader))
-                    {
-                        teamList.Add(player.userID, team.teamLeader);
-
-                        if (debug) Puts("You has team now!");
-
-                        if (quadrants.ContainsKey(player.userID) && player.userID != team.teamLeader)
-                        {
-                            foreach (var zone in quadrants[player.userID])
-                            {
-                                DeleteMarkerFromMap(flagmarkers[zone][0]);
-                                DeleteMarkerFromMap(flagmarkers[zone][1]);
-                                DeleteMarkerFromMap(flagmarkers[zone][2]);
-                                flagmarkers.Remove(zone);
-                                if (!quadrants.ContainsKey(team.teamLeader))
-                                {
-                                    quadrants.Add(team.teamLeader, new List<string>());
-                                    quadrants[team.teamLeader].Add(zone);
-                                }
-                                else
-                                {
-                                    var match = quadrants[team.teamLeader].FirstOrDefault(stringToCheck => stringToCheck.Contains(zone));
-                                    if (match != null) return;
-                                    else
-                                    {
-                                        quadrants[team.teamLeader].Add(zone);
-                                    }
-                                }
-
-                                if (!gatherMultiplier.ContainsKey(team.teamLeader)) gatherMultiplier.Add(team.teamLeader, 1);
-                                else gatherMultiplier[team.teamLeader]++;
-                                var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zone);
-                                SpawnFlag(zonelocation, zone, team.teamLeader);
-                            }
-                            quadrants.Remove(player.userID);
-                            gatherMultiplier.Remove(player.userID);
-                        }
-                        SaveData();
-                        return;
-                    }
-                    else
-                    {
-
-                        var currentLeader = teamList[team.teamLeader];
-                        teamList.Add(player.userID, currentLeader);
-
-                        if (debug) Puts("You has team now!");
-                        if (quadrants.ContainsKey(player.userID))
-                        {
-                            foreach (var zone in quadrants[player.userID])
-                            {
-                                DeleteMarkerFromMap(flagmarkers[zone][0]);
-                                DeleteMarkerFromMap(flagmarkers[zone][1]);
-                                DeleteMarkerFromMap(flagmarkers[zone][2]);
-                                flagmarkers.Remove(zone);
-                                if (!quadrants.ContainsKey(currentLeader))
-                                {
-                                    quadrants.Add(currentLeader, new List<string>());
-                                    quadrants[currentLeader].Add(zone);
-                                }
-                                else
-                                {
-                                    var match = quadrants[currentLeader].FirstOrDefault(stringToCheck => stringToCheck.Contains(zone));
-                                    if (match != null) return;
-                                    else
-                                    {
-                                        quadrants[currentLeader].Add(zone);
-
-                                    }
-                                }
-
-                                if (!gatherMultiplier.ContainsKey(currentLeader)) gatherMultiplier.Add(currentLeader, 1);
-                                else gatherMultiplier[currentLeader]++;
-                                var zonelocation = (Vector3)ZoneManager.Call("GetZoneLocation", zone);
-                                SpawnFlag(zonelocation, zone, currentLeader);
-                            }
-                            quadrants.Remove(player.userID);
-                            gatherMultiplier.Remove(player.userID);
-                        }
-                        SaveData();
-                        return;
-                    }
-                }
-                else
-                {
-                    timer.In(5, () => LordTeamInit(player));
-                    return;
-                }
-            }
-        }
         #endregion
+
 
         #region OxideHooks
         void OnEntityKill(BaseEntity entity)
@@ -276,6 +180,7 @@ namespace Oxide.Plugins
                 var zoneid = poles.FirstOrDefault(x => x.Value == entity.ServerPosition).Key;
                 if (zoneid != null)
                 {
+                    if (debug) Puts("ZoneID id " + zoneid);
                     if (currentsettings["graycircles"] == 1)
                     {
                         DeleteMarkerFromMap(allmarkers[zoneid]);
@@ -285,10 +190,21 @@ namespace Oxide.Plugins
                     DeleteMarkerFromMap(flagmarkers[zoneid][1]);
                     DeleteMarkerFromMap(flagmarkers[zoneid][2]);                        
                     flagmarkers.Remove(zoneid);                  
-                    if (debug) Puts("User ID " + entity.OwnerID);
-                    ulong teampid;
-                    if (teamList.ContainsKey(entity.OwnerID)) { teampid = teamList[entity.OwnerID]; }
-                    else teampid = entity.OwnerID;
+                    ulong teampid = 0;
+                    foreach (KeyValuePair<ulong, List<string>> playerid in quadrants)
+                    {
+                        var match = playerid.Value.FirstOrDefault(stringToCheck => stringToCheck.Contains(zoneid));
+                        if (match != null)
+                        {
+                            teampid = playerid.Key;
+                            break;
+                        }
+                    }
+                    if (teampid == 0)
+                    {
+                        if (debug) Puts("Can't found cell owner");
+                        return;
+                    }
                     quadrants[teampid].Remove(zoneid);
                     if (quadrants[teampid].Count == 0) quadrants.Remove(teampid);
                     poles.Remove(zoneid);
@@ -307,25 +223,16 @@ namespace Oxide.Plugins
         void OnEntityBuilt(Planner plan, GameObject go)
         {
             BasePlayer player = plan.GetOwnerPlayer();
-            string curentZoneId = "None";
             ulong teampid;
-            if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
+            string playerClan = Clans.Call<string>("GetClanOf", player);
+            if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
             else teampid = player.userID;
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             var entity = go.ToBaseEntity();
             if (entity.prefabID == bannerprefabid && zids.Length > 0)
             {
                 if (debug) Puts("Looking for exact landlord zone");
-                
-                for (int i = 0; i < zids.Length; i++)
-                {
-                    string zonename = (string)ZoneManager.Call("GetZoneName", zids[i]);
-                    if (debug) Puts("Found zone " + zonename);
-                    if (zonename.StartsWith(zonenameprefix)) {
-                        if (debug) Puts("Landlord zone found");
-                        curentZoneId = zids[i];
-                    }
-                }
+                string curentZoneId = GetLordZoneId(zids);
                 if (curentZoneId == "None")
                 {
                     if (debug) Puts("Landlord zone not found!");
@@ -386,7 +293,8 @@ namespace Oxide.Plugins
         void OnCollectiblePickup(Item item, BasePlayer player)
         {
             ulong teampid;
-            if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
+            string playerClan = Clans.Call<string>("GetClanOf", player);
+            if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
             else teampid = player.userID;
             // Check if the player has at least a captured cell and if not skip further processing 
             if (!quadrants.ContainsKey(teampid)) return;
@@ -397,7 +305,13 @@ namespace Oxide.Plugins
             {
                 if (zids.Length > 0)
                 {
-                    string curentZoneId = zids[0];
+                    if (debug) Puts("Looking for exact landlord zone");
+                    string curentZoneId = GetLordZoneId(zids);
+                    if (curentZoneId == "None")
+                    {
+                        if (debug) Puts("Landlord zone not found!");
+                        return;
+                    }
                     match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
                     if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
                     {
@@ -423,7 +337,6 @@ namespace Oxide.Plugins
                     }
                 }
             }
-
         }
 
         object OnDispenserGather(ResourceDispenser dispenser, BasePlayer player, Item item)
@@ -431,7 +344,8 @@ namespace Oxide.Plugins
             ulong teampid;
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             string match = null;
-            if (teamList.ContainsKey(player.userID)) { teampid = teamList[player.userID]; }
+            string playerClan = Clans.Call<string>("GetClanOf", player);
+            if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
             else teampid = player.userID;
             // Check if the player has at least a captured cell and if not skip further processing 
             if (!quadrants.ContainsKey(teampid)) return null;
@@ -440,7 +354,14 @@ namespace Oxide.Plugins
             {
                 if (zids.Length > 0)
                 {
-                    string curentZoneId = zids[0];
+                    if (debug) Puts("Looking for exact landlord zone");
+                    string curentZoneId = GetLordZoneId(zids);
+                    if (curentZoneId == "None")
+                    {
+                        if (debug) Puts("Landlord zone not found!");
+                        return null;
+                    }
+
                     match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
                    
                     if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
@@ -474,6 +395,24 @@ namespace Oxide.Plugins
             return null;
         }
 
+
+        private void OnClanCreate(string tag)
+        {
+            timer.Once(1f, () =>
+            {
+                JObject clan = GetClan(tag);
+                if (debug) Puts("Clan owner " + clan["owner"]);
+                teamList.Add(tag, (ulong)clan["owner"]);
+                SaveData();
+            });
+        }
+
+        private void OnClanDestroy(string tag)
+        {
+            if (debug) Puts("Existing clan destroyed");
+            teamList.Remove(tag);
+            SaveData();
+        }
         #endregion
 
         #region MarkersAndMap
@@ -565,7 +504,7 @@ namespace Oxide.Plugins
             public Dictionary<ulong, List<string>> QuadrantsData = new Dictionary<ulong, List<string>>();
             public Dictionary<string, Vector3> PolesLocationData = new Dictionary<string, Vector3>();
             public Dictionary<ulong, int> GatherRateData = new Dictionary<ulong, int>();
-            public Dictionary<ulong, ulong> TeamListData = new Dictionary<ulong, ulong>();
+            public Dictionary<string, ulong> TeamListData = new Dictionary<string, ulong>();
             public Dictionary<string, int> LandlordSettings = new Dictionary<string, int>();
         }
 
@@ -646,6 +585,17 @@ namespace Oxide.Plugins
             data.WriteObject(configData);
         }
 
+        private JObject GetClan(string tag)
+        {
+            JObject clan = (JObject)Clans.Call("GetClan", tag);
+            if (clan == null)
+            {
+                if (debug) Puts("Clan " + tag + " not found");
+                return null;
+            }
+            return clan;
+        }
+
         #endregion
 
         #region ChatCommands
@@ -653,7 +603,8 @@ namespace Oxide.Plugins
         private void CmdChatLordStats(BasePlayer player, string command, string[] args)
         {
             ulong teampid;
-            if (teamList.ContainsKey(player.userID)) teampid = teamList[player.userID];
+            string playerClan = Clans.Call<string>("GetClanOf", player);
+            if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
             else teampid = player.userID;
 
             if (gatherMultiplier.ContainsKey(teampid) && gatherMultiplier[teampid] > 0)
@@ -662,17 +613,6 @@ namespace Oxide.Plugins
             }
             else player.ChatMessage(Lang("LordStatusZero", player.UserIDString, teampid.ToString()));
 
-        }
-        [ChatCommand("lordclr")]
-        private void CmdChatLordCls(BasePlayer player, string command, string[] args)
-        {
-            if (teamList.ContainsKey(player.userID))
-            {
-                teamList.Remove(player.userID);
-                player.ChatMessage(Lang("TeamClearSuccess", player.UserIDString));
-                LordTeamInit(player);
-            }
-            else player.ChatMessage(Lang("HaveNoTeam", player.UserIDString));
         }
 
         [ChatCommand("lordadmin")]
@@ -783,6 +723,23 @@ namespace Oxide.Plugins
         #endregion
 
         # region Helpers
+
+        private string GetLordZoneId(string[] zids)
+        {
+            string czd = "None";
+            for (int i = 0; i < zids.Length; i++)
+            {
+                string zonename = (string)ZoneManager.Call("GetZoneName", zids[i]);
+                if (debug) Puts("Found zone " + zonename);
+                if (zonename.StartsWith(zonenameprefix))
+                {
+                    if (debug) Puts("Landlord zone found");
+                    czd = zids[i];
+                }
+            }
+            return czd;
+        }
+
         private static string GetGrid(Vector3 position)
         {
             var chars = new string[] { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN", "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX", "AY", "AZ" };
