@@ -13,7 +13,7 @@ Land Lord is a modification for the original game.
 4. Cells owners shows on the game map
 5. The one cell the one "Large banner on Pole"
 
-## Clans plugon support
+## Clans plugin support
 
 The plugin supports the Clans plugin. Clan members share gather same rate and same clan flag. If a member captures a cell it will increase the clan gater rate.  
 The clan flag is a clan owner flag, so if the owner leaves the clan, he takes all flags with him. (!) CAUTION Change a clan leader can lead to unstable work.
@@ -34,20 +34,12 @@ landlord.admin -- Allows player to use the chat commands starts with /lordadmin
 * `/lord` - Show your statistics
 * `/lordclr` - Leave team
 
-## Install, Backup and Re-Install
+## Installation
 The plugin works with Zona Manager! Initialization has two simple steps:
 - Getting the chosen map size and generating a bunch of zones (each zone equals the game map cell)
 - Initialize Landlord by creating empty Landlord.data config file under ../oxide/data directory
 
 The first initialization takes time up to 30 seconds. It depends on your map size.
-
-All sensitive data stored at Landlord.data file. All data tied to ZoneManager data and the game map size
-
-Backup-restore functional is not emplimeted yet, but you can try: 
-- To backup all flags save Landlord.data config file
-- To clear all flags just delete Landlord.data config file
-Your backup will work only with your server backup. You can't bring up a new server instance and copy Landlord.data there.
-
-We working on a full-working restore tool.
+All sensitive data stored at `Landlord.data` file. All data tied to ZoneManager data and the game map size
 
 Feel free to share ideas and send merge requests.
