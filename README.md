@@ -13,6 +13,8 @@ Land Lord is a modification for the original game.
 4. Cells owners shows on the game map
 5. The one cell the one "Large banner on Pole"
 
+[![Landlord tutorial](http://img.youtube.com/vi/ZIw2PAAopVU/0.jpg)](https://youtu.be/ZIw2PAAopVU "Landlord Tutorial")
+
 ## Clans plugin support
 
 The plugin supports the Clans plugin. Clan members share gather same rate and same clan flag. If a member captures a cell it will increase the clan gater rate.  
@@ -32,7 +34,7 @@ landlord.admin -- Allows player to use the chat commands starts with /lordadmin
 ## Chat Commands
 
 * `/lord` - Show your statistics
-* `/lordclr` - Leave team
+
 
 ## Installation
 The plugin works with Zona Manager! Initialization has two simple steps:
