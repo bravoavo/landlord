@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -10,7 +10,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.12")]
+    [Info("Landlord", "bravoavo", "1.0.14")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -243,7 +243,7 @@ namespace Oxide.Plugins
                 {
                     if(!CheckConnected(curentZoneId, teampid))
                     {
-                        entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
+                        //entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
                         player.ChatMessage(Lang("CellNotConnected", player.UserIDString));
                         return;
                     }
@@ -251,7 +251,7 @@ namespace Oxide.Plugins
 
                 if (poles.ContainsKey(curentZoneId))
                 {
-                    entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
+                    //entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
                     player.ChatMessage(Lang("CellHasPole", player.UserIDString));
                     return;
                 }
