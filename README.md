@@ -1,4 +1,4 @@
-![image](https://github.com/bravoavo/LandLord/blob/main/rust-landlord.png?raw=true)
+![image](https://github.com/bravoavo/LandLord/blob/main/rust-landlord.png?raw same as true)
 Land Lord is a modification for the original game. 
 
 ## Game Process
@@ -30,6 +30,23 @@ landlord.admin -- Allows player to use the chat commands starts with /lordadmin
 * `/lordadmin graycircles enable|disable` - Show gray circles on captured cells. Enabled by default.
 * `/lordadmin gatherratio [from 1 to 1000]` - Set gather ratio in percentage. Default 3.
 * `/lordadmin settings` - Show current settings of notrespass and onlyconnected modes.
+* `/lordadmin blockitem [item]` - Use short item name to block item and prevent the gathering increase (skull.human, wood, sulfur.ore, etc.).
+* `/lordadmin unblockitem [item]` - Oposite of blockitem command .
+* `/lordadmin blockitemlist` - Show all blocked items.
+* `/lordadmin blockitemclear` - Delete all blocked items.
+
+You can use these shortcuts for command words to make configuration process a little bit easear:
+* `nt` same as `notrespass`
+* `oc` same as `onlyconnected`
+* `gc` same as `graycircles`
+* `gr` same as `gatherratio`
+* `st` same as `settings`
+* `blk` same as `blockitem`
+* `unblk` same as `unblockitem`
+* `blklist` same as `blockitemlist`
+* `blkclr` same as `blockitemclear`
+
+
 	
 ## Chat Commands
 

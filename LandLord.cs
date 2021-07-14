@@ -1,4 +1,4 @@
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -10,7 +10,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.14")]
+    [Info("Landlord", "bravoavo", "1.0.15")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -40,8 +40,11 @@ namespace Oxide.Plugins
         public Dictionary<ulong, int> gatherMultiplier = new Dictionary<ulong, int>();
         public Dictionary<string, ulong> teamList = new Dictionary<string, ulong>();
 
+
         public Dictionary<string, MapMarkerGenericRadius> allmarkers = new Dictionary<string, MapMarkerGenericRadius>();
         public Dictionary<string, List<MapMarkerGenericRadius>> flagmarkers = new Dictionary<string, List<MapMarkerGenericRadius>>();
+
+        public List<string> blockedItemsList { get; set; } = new List<string>();
 
         #region Localization
         private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
@@ -50,10 +53,18 @@ namespace Oxide.Plugins
             lang.RegisterMessages(new Dictionary<string, string>
             {
                 ["LordStatus"] = "<color=orange>LANDLORD:</color> Grounds seized: {0} TeamID is: {1}",
-                ["UsageAdmin"] = "<color=orange>LANDLORD:</color> Usage:\n /lordadmin notrespass enable|disable \n /lordadmin onlyconnected enable|disable \n /lordadmin graycircles enable|disable \n /lordadmin gatherratio [from 1 to 1000] \n /lordadmin settings",
+                ["UsageAdmin"] = "<color=orange>LANDLORD:</color> Usage:\n /lordadmin notrespass enable|disable \n " +
+                "/lordadmin onlyconnected enable|disable " +
+                "\n /lordadmin graycircles enable|disable " +
+                "\n /lordadmin gatherratio [from 1 to 1000] " +
+                "\n /lordadmin settings " +
+                "\n /lordadmin blockitem [item] \n /lordadmin unblockitem [item] \n /lordadmin blockitemlist \n /lordadmin blockitemclear",
                 ["NoPermission"] = "<color=orange>LANDLORD:</color> You do not have the permissions to use this command.",
                 ["LordStatusZero"] = "<color=orange>LANDLORD:</color> Grounds seized: 0 TeamID is: {0}",
                 ["TeamClearSuccess"] = "<color=orange>LANDLORD:</color> Team clear: Success!",
+                ["BlockedItemsEditSuccess"] = "<color=orange>LANDLORD:</color> Blocked items list edit: Success!",
+                ["BlockedItemsClearSuccess"] = "<color=orange>LANDLORD:</color> Blocked items clear: Success!",
+                ["BlockedItems"] = "<color=orange>LANDLORD:</color> Blocked Items: {0}",
                 ["HaveNoTeam"] = "<color=orange>LANDLORD:</color> You are have no team!",
                 ["CellHasPole"] = "<color=orange>LANDLORD:</color> This map cell already has a pole! Destroy it before build a new one",
                 ["SettingsChanged"] = "<color=orange>LANDLORD:</color> Settings changed!",
@@ -61,7 +72,7 @@ namespace Oxide.Plugins
                 ["NotrespassStatus"] = "<color=orange>LANDLORD:</color> notrespass mode is {0} to switch use /lordadmin notrespass enable|disable ",
                 ["OnlyconnectedStatus"] = "<color=orange>LANDLORD:</color> onlyconected mode is {0}",
                 ["GatherratioStatus"] = "<color=orange>LANDLORD:</color> Gatherratio set to {0}",
-                ["GraycirclesStatus"] = "<color=orange>LANDLORD:</color> graycircles is {0}",          
+                ["GraycirclesStatus"] = "<color=orange>LANDLORD:</color> graycircles is {0}",
                 ["CellNotConnected"] = "<color=orange>LANDLORD:</color> The cell you try to capture not connected to another yours",
                 ["CellCaptured"] = "<color=orange>LANDLORD:</color> You deploy pole! Your gather rate increased!",
                 ["CellCapturedGlobal"] = "<color=orange>LANDLORD:</color> Player {0} has captured the cell {1}",
@@ -91,7 +102,7 @@ namespace Oxide.Plugins
                     counter++;
                 }
                 j++;
-                Puts("Generating...> "+ counter + " of " + celltogenerate);
+                Puts("Generating...> " + counter + " of " + celltogenerate);
             }
             Puts("Generating is done!");
             var InitFile = Interface.Oxide.DataFileSystem.GetFile(datafile_name);
@@ -188,8 +199,8 @@ namespace Oxide.Plugins
                     }
                     DeleteMarkerFromMap(flagmarkers[zoneid][0]);
                     DeleteMarkerFromMap(flagmarkers[zoneid][1]);
-                    DeleteMarkerFromMap(flagmarkers[zoneid][2]);                        
-                    flagmarkers.Remove(zoneid);                  
+                    DeleteMarkerFromMap(flagmarkers[zoneid][2]);
+                    flagmarkers.Remove(zoneid);
                     ulong teampid = 0;
                     foreach (KeyValuePair<ulong, List<string>> playerid in quadrants)
                     {
@@ -241,7 +252,7 @@ namespace Oxide.Plugins
                 if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID + " zone ID is " + curentZoneId);
                 if (currentsettings["onlyconnected"] == 1 && quadrants.ContainsKey(teampid))
                 {
-                    if(!CheckConnected(curentZoneId, teampid))
+                    if (!CheckConnected(curentZoneId, teampid))
                     {
                         //entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
                         player.ChatMessage(Lang("CellNotConnected", player.UserIDString));
@@ -293,6 +304,8 @@ namespace Oxide.Plugins
         void OnCollectiblePickup(Item item, BasePlayer player)
         {
             ulong teampid;
+            if (blockedItemsList.Contains(item.info.shortname)) return; 
+
             string playerClan = Clans.Call<string>("GetClanOf", player);
             if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
             else teampid = player.userID;
@@ -342,6 +355,8 @@ namespace Oxide.Plugins
         object OnDispenserGather(ResourceDispenser dispenser, BasePlayer player, Item item)
         {
             ulong teampid;
+            if (blockedItemsList.Contains(item.info.shortname)) return null;
+
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             string match = null;
             string playerClan = Clans.Call<string>("GetClanOf", player);
@@ -363,7 +378,7 @@ namespace Oxide.Plugins
                     }
 
                     match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
-                   
+
                     if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
                     {
                         if (gatherMultiplier.ContainsKey(teampid))
@@ -436,7 +451,7 @@ namespace Oxide.Plugins
             mapMarker.radius = (float)Math.Round(zoneradius, 2);
             mapMarker.Spawn();
             mapMarker.SendUpdate();
-  
+
             if (!allmarkers.ContainsKey(curentZoneId))
             {
                 allmarkers.Add(curentZoneId, mapMarker);
@@ -506,6 +521,7 @@ namespace Oxide.Plugins
             public Dictionary<ulong, int> GatherRateData = new Dictionary<ulong, int>();
             public Dictionary<string, ulong> TeamListData = new Dictionary<string, ulong>();
             public Dictionary<string, int> LandlordSettings = new Dictionary<string, int>();
+            public List<string> BlockedItems = new List<string>();
         }
 
         private void LoadData()
@@ -516,11 +532,13 @@ namespace Oxide.Plugins
             teamList.Clear();
             poles.Clear();
             currentsettings.Clear();
+            blockedItemsList.Clear();
             try
             {
                 if (debug) Puts("A try to use existing configuration");
                 configData = data.ReadObject<ConfigData>();
                 quadrants = configData.QuadrantsData;
+                blockedItemsList = configData.BlockedItems;
                 flagi = configData.FlagiData;
                 gatherMultiplier = configData.GatherRateData;
                 teamList = configData.TeamListData;
@@ -640,7 +658,7 @@ namespace Oxide.Plugins
                             if (args[1] == "disable") currentsettings["notrespassgather"] = 0;
                         }
                         tstatus = (currentsettings["notrespassgather"] == 1) ? "Enabled" : "Disabled";
-                        player.ChatMessage(Lang("NotrespassStatus", player.UserIDString, tstatus)); 
+                        player.ChatMessage(Lang("NotrespassStatus", player.UserIDString, tstatus));
                         SaveData();
                         break;
                     case "oc":
@@ -669,7 +687,7 @@ namespace Oxide.Plugins
                                         SpawnMarkerOnMap(zonelocation, zoneid);
                                     }
                                 }
-                                currentsettings["graycircles"] = 1;                                
+                                currentsettings["graycircles"] = 1;
                             }
                             if (args[1] == "disable" && currentsettings["graycircles"] == 1)
                             {
@@ -710,6 +728,38 @@ namespace Oxide.Plugins
                     case "settings":
                         player.ChatMessage(Lang("CurrentSettings", player.UserIDString, tstatus = (currentsettings["notrespassgather"] == 1) ? "Enabled" : "Disabled", cstatus = (currentsettings["onlyconnected"] == 1) ? "Enabled" : "Disabled", gcstatus = (currentsettings["graycircles"] == 1) ? "Enabled" : "Disabled", currentsettings["gatherratio"]));
                         SaveData();
+                        break;
+                    case "blk":
+                    case "blockitem":
+                        if (args.Length == 2)
+                        {
+                            string item = Convert.ToString(args[1]);
+                            blockedItemsList.Add(item);
+                        }
+                        SaveData();
+                        player.ChatMessage(Lang("BlockedItemsEditSuccess", player.UserIDString));
+                        break;
+                    case "unblk":
+                    case "unblockitem":
+                        if (args.Length == 2)
+                        {
+                            string item = Convert.ToString(args[1]);
+                            blockedItemsList.Remove(item);
+                        }
+                        SaveData();
+                        player.ChatMessage(Lang("BlockedItemsEditSuccess", player.UserIDString));
+                        break;
+                    case "blklist":
+                    case "blockitemlist":
+                        string itemlist = string.Join(", ", blockedItemsList);
+                        if (debug) Puts("Items: " + itemlist);
+                        player.ChatMessage(Lang("BlockedItems", player.UserIDString, itemlist));
+                        break;
+                    case "blkclr":
+                    case "blockitemclear":
+                        blockedItemsList.Clear();
+                        SaveData();
+                        player.ChatMessage(Lang("BlockedItemsClearSuccess", player.UserIDString)); 
                         break;
                 }
                 return;
@@ -765,7 +815,7 @@ namespace Oxide.Plugins
         private bool CheckConnected(string zid, ulong teampid)
         {
             ulong uzid = Convert.ToUInt64(zid);
-            ulong [] uzids = new ulong [] { uzid + 1, uzid - 1, uzid + 1000, uzid - 1000 };
+            ulong[] uzids = new ulong[] { uzid + 1, uzid - 1, uzid + 1000, uzid - 1000 };
             for (int i = 0; i < uzids.Length; i++)
             {
                 var match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(Convert.ToString(uzids[i])));
