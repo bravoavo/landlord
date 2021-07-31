@@ -10,7 +10,7 @@ using Oxide.Core.Configuration;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.15")]
+    [Info("Landlord", "bravoavo", "1.0.16")]
     [Description("Take control of the map")]
 
     class LandLord : RustPlugin
@@ -23,7 +23,7 @@ namespace Oxide.Plugins
         //Constant initialization
         readonly uint bannerprefabid = 3188315846;
         readonly float size = 146.33f;
-        readonly bool debug = false;
+        readonly bool debug = true;
         int notrespassgather = 1;
         int onlyconnected = 1;
         int gatherratio = 3;
@@ -242,31 +242,8 @@ namespace Oxide.Plugins
             var entity = go.ToBaseEntity();
             if (entity.prefabID == bannerprefabid && zids.Length > 0)
             {
-                if (debug) Puts("Looking for exact landlord zone");
                 string curentZoneId = GetLordZoneId(zids);
-                if (curentZoneId == "None")
-                {
-                    if (debug) Puts("Landlord zone not found!");
-                    return;
-                }
-                if (debug) Puts("Entity build. Prefab ID is " + entity.prefabID + " zone ID is " + curentZoneId);
-                if (currentsettings["onlyconnected"] == 1 && quadrants.ContainsKey(teampid))
-                {
-                    if (!CheckConnected(curentZoneId, teampid))
-                    {
-                        //entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
-                        player.ChatMessage(Lang("CellNotConnected", player.UserIDString));
-                        return;
-                    }
-                }
-
-                if (poles.ContainsKey(curentZoneId))
-                {
-                    //entity.Invoke(() => entity.Kill(BaseNetworkable.DestroyMode.Gib), 0.1f);
-                    player.ChatMessage(Lang("CellHasPole", player.UserIDString));
-                    return;
-                }
-
+                if (debug) Puts("Banner entity was built. Prefab ID is " + entity.prefabID + " zone ID is " + curentZoneId);
                 if (!quadrants.ContainsKey(teampid))
                 {
                     quadrants.Add(teampid, new List<string>());
@@ -298,7 +275,7 @@ namespace Oxide.Plugins
                 PrintToChat(Lang("CellCapturedGlobal", player.UserIDString, player.displayName, GetGrid(entity.ServerPosition)));
                 SaveData();
             }
-            else if (debug) Puts("Error! Not found zone ID or prefab!");
+            else if (debug) Puts("After build - Not found zone ID or prefab!");
         }
 
         void OnCollectiblePickup(Item item, BasePlayer player)
@@ -410,6 +387,45 @@ namespace Oxide.Plugins
             return null;
         }
 
+        object CanBuild(Planner planner, Construction prefab, Construction.Target target)
+        {
+            BasePlayer player = planner.GetOwnerPlayer();
+            ulong teampid;
+            string playerClan = Clans.Call<string>("GetClanOf", player);
+            if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
+            else teampid = player.userID;
+            string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
+            if (prefab.prefabID == bannerprefabid && zids.Length > 0)
+            {
+                if (debug) Puts("Looking for exact landlord zone");
+                string curentZoneId = GetLordZoneId(zids);
+                if (curentZoneId == "None")
+                {
+                    if (debug) Puts("Error! Landlord zone not found!");
+                    return false;
+                }
+                if (currentsettings["onlyconnected"] == 1 && quadrants.ContainsKey(teampid))
+                {
+                    if (!CheckConnected(curentZoneId, teampid))
+                    {
+                        player.ChatMessage(Lang("CellNotConnected", player.UserIDString));
+                        if (debug) Puts("Zone not connected to another!");
+                        return false;
+                    }
+                }
+
+                if (poles.ContainsKey(curentZoneId))
+                {
+                    player.ChatMessage(Lang("CellHasPole", player.UserIDString));
+                    if (debug) Puts("Zone has a pole already!");
+                    return false;
+                }
+                if (debug) Puts("Banner building allowed. Prefab ID is " + prefab.prefabID + " zone ID is " + curentZoneId);
+                return null;
+            }
+            else if (debug) Puts("Before build - Not found zone ID or banner prefab.");
+            return null;    
+        }
 
         private void OnClanCreate(string tag)
         {
