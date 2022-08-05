@@ -1,22 +1,20 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System;
-using UnityEngine;
-using Oxide.Core.Plugins;
+using Newtonsoft.Json.Linq;
 using Oxide.Core;
 using Oxide.Core.Configuration;
-
+using Oxide.Core.Plugins;
+using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Landlord", "bravoavo", "1.0.16")]
+    [Info("LandLord", "bravoavo", "1.0.17")]
     [Description("Take control of the map")]
-
     class LandLord : RustPlugin
     {
-
         [PluginReference] Plugin ZoneManager, Clans;
+
         ConfigData configData;
         private DynamicConfigFile data;
 
@@ -39,7 +37,6 @@ namespace Oxide.Plugins
         public Dictionary<string, Vector3> poles = new Dictionary<string, Vector3>();
         public Dictionary<ulong, int> gatherMultiplier = new Dictionary<ulong, int>();
         public Dictionary<string, ulong> teamList = new Dictionary<string, ulong>();
-
 
         public Dictionary<string, MapMarkerGenericRadius> allmarkers = new Dictionary<string, MapMarkerGenericRadius>();
         public Dictionary<string, List<MapMarkerGenericRadius>> flagmarkers = new Dictionary<string, List<MapMarkerGenericRadius>>();
@@ -110,6 +107,7 @@ namespace Oxide.Plugins
             InitFile.Save();
 
         }
+
         #endregion
 
         #region InitPlugin
@@ -140,11 +138,10 @@ namespace Oxide.Plugins
             LoadData();
         }
 
-
-
         #endregion
 
         #region PlayerInit
+
         void OnPlayerSleepEnded(BasePlayer player)
         {
             foreach (var quadrat in quadrants)
@@ -180,8 +177,8 @@ namespace Oxide.Plugins
 
         #endregion
 
-
         #region OxideHooks
+
         void OnEntityKill(BaseEntity entity)
         {
             if (entity.prefabID == bannerprefabid)
@@ -230,7 +227,6 @@ namespace Oxide.Plugins
             }
         }
 
-
         void OnEntityBuilt(Planner plan, GameObject go)
         {
             BasePlayer player = plan.GetOwnerPlayer();
@@ -278,11 +274,9 @@ namespace Oxide.Plugins
             else if (debug) Puts("After build - Not found zone ID or prefab!");
         }
 
-        void OnCollectiblePickup(Item item, BasePlayer player)
+        void OnCollectiblePickup(CollectibleEntity collectible, BasePlayer player)
         {
             ulong teampid;
-            if (blockedItemsList.Contains(item.info.shortname)) return; 
-
             string playerClan = Clans.Call<string>("GetClanOf", player);
             if (playerClan != null && teamList.ContainsKey(playerClan)) teampid = teamList[playerClan];
             else teampid = player.userID;
@@ -291,39 +285,44 @@ namespace Oxide.Plugins
             string[] zids = (string[])ZoneManager.Call("GetPlayerZoneIDs", player);
             string match = null;
 
-            if (currentsettings["notrespassgather"] == 1)
+            foreach (ItemAmount item in collectible.itemList)
             {
-                if (zids.Length > 0)
+                if (blockedItemsList.Contains(item.itemDef.shortname)) return;
+
+                if (currentsettings["notrespassgather"] == 1)
                 {
-                    if (debug) Puts("Looking for exact landlord zone");
-                    string curentZoneId = GetLordZoneId(zids);
-                    if (curentZoneId == "None")
+                    if (zids.Length > 0)
                     {
-                        if (debug) Puts("Landlord zone not found!");
-                        return;
-                    }
-                    match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
-                    if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
-                    {
-                        if (gatherMultiplier.ContainsKey(teampid))
+                        if (debug) Puts("Looking for exact landlord zone");
+                        string curentZoneId = GetLordZoneId(zids);
+                        if (curentZoneId == "None")
                         {
-                            if (gatherMultiplier[teampid] > 0)
+                            if (debug) Puts("Landlord zone not found!");
+                            return;
+                        }
+                        match = quadrants[teampid].FirstOrDefault(stringToCheck => stringToCheck.Contains(curentZoneId));
+                        if (!poles.ContainsKey(curentZoneId) || (poles.ContainsKey(curentZoneId) && match != null))
+                        {
+                            if (gatherMultiplier.ContainsKey(teampid))
                             {
-                                float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
-                                item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                                if (gatherMultiplier[teampid] > 0)
+                                {
+                                    float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
+                                    item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                                }
                             }
                         }
                     }
                 }
-            }
-            else
-            {
-                if (gatherMultiplier.ContainsKey(teampid))
+                else
                 {
-                    if (gatherMultiplier[teampid] > 0)
+                    if (gatherMultiplier.ContainsKey(teampid))
                     {
-                        float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
-                        item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                        if (gatherMultiplier[teampid] > 0)
+                        {
+                            float multiplier = (float)gatherMultiplier[teampid] * currentsettings["gatherratio"] / 100;
+                            item.amount = (int)(item.amount + 1 + item.amount * multiplier);
+                        }
                     }
                 }
             }
@@ -424,7 +423,7 @@ namespace Oxide.Plugins
                 return null;
             }
             else if (debug) Puts("Before build - Not found zone ID or banner prefab.");
-            return null;    
+            return null;
         }
 
         private void OnClanCreate(string tag)
@@ -444,15 +443,16 @@ namespace Oxide.Plugins
             teamList.Remove(tag);
             SaveData();
         }
+
         #endregion
 
         #region MarkersAndMap
+
         private void DeleteMarkerFromMap(MapMarkerGenericRadius marker)
         {
             marker.Kill();
             marker.SendUpdate();
         }
-
 
         private void SpawnMarkerOnMap(Vector3 position, string curentZoneId)
         {
@@ -476,7 +476,6 @@ namespace Oxide.Plugins
             {
                 if (debug) Puts("Marker already in dictionary");
             }
-
         }
 
         private void SpawnFlag(Vector3 position, string curentZoneId, ulong playerId)
@@ -525,6 +524,7 @@ namespace Oxide.Plugins
                 if (debug) Puts("Flag marker already in dictionary");
             }
         }
+
         #endregion
 
         #region DataManagement
@@ -633,6 +633,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region ChatCommands
+
         [ChatCommand("lord")]
         private void CmdChatLordStats(BasePlayer player, string command, string[] args)
         {
@@ -646,7 +647,6 @@ namespace Oxide.Plugins
                 player.ChatMessage(Lang("LordStatus", player.UserIDString, gatherMultiplier[teampid].ToString(), teampid.ToString()));
             }
             else player.ChatMessage(Lang("LordStatusZero", player.UserIDString, teampid.ToString()));
-
         }
 
         [ChatCommand("lordadmin")]
@@ -775,7 +775,7 @@ namespace Oxide.Plugins
                     case "blockitemclear":
                         blockedItemsList.Clear();
                         SaveData();
-                        player.ChatMessage(Lang("BlockedItemsClearSuccess", player.UserIDString)); 
+                        player.ChatMessage(Lang("BlockedItemsClearSuccess", player.UserIDString));
                         break;
                 }
                 return;
@@ -786,9 +786,10 @@ namespace Oxide.Plugins
                 return;
             }
         }
+
         #endregion
 
-        # region Helpers
+        #region Helpers
 
         private string GetLordZoneId(string[] zids)
         {
@@ -839,6 +840,7 @@ namespace Oxide.Plugins
             }
             return false;
         }
+
         #endregion
     }
 }
